@@ -1,0 +1,105 @@
+{
+  "project_info": {
+    "project_number": "660594970419",
+    "project_id": "vu-community-app",
+    "storage_bucket": "vu-community-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660594970419:android:4f1b720e18671e2c66f846",
+        "android_client_info": {
+          "package_name": "com.example.vu_community_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtVcBB7cmO-1wvnm7KLTDlY7lvI66AJZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660594970419:android:176ab3d502ea0c2566f846",
+        "android_client_info": {
+          "package_name": "com.example.vu_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtVcBB7cmO-1wvnm7KLTDlY7lvI66AJZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660594970419:android:1996b404d0254fcd66f846",
+        "android_client_info": {
+          "package_name": "com.example.vu_new_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtVcBB7cmO-1wvnm7KLTDlY7lvI66AJZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660594970419:android:b10693e4d9c838de66f846",
+        "android_client_info": {
+          "package_name": "com.example.vu_online"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtVcBB7cmO-1wvnm7KLTDlY7lvI66AJZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660594970419:android:f6ad686a1fc58a8866f846",
+        "android_client_info": {
+          "package_name": "com.itgeniuscyber.vu_community"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtVcBB7cmO-1wvnm7KLTDlY7lvI66AJZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
