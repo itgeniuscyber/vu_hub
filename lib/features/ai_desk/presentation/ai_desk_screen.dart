@@ -61,6 +61,40 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
           children: [
             _AiHeader(scheme: scheme),
             SizedBox(
+              height: 106,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _AiToolCard(
+                    title: 'Smart search',
+                    subtitle: 'Find notices, events, and resources',
+                    icon: Icons.travel_explore,
+                    color: scheme.primary,
+                    onTap: () => _send(
+                      'Search campus help for exam timetable and latest notices',
+                    ),
+                  ),
+                  _AiToolCard(
+                    title: 'Study assist',
+                    subtitle: 'Summaries, flashcards, revision help',
+                    icon: Icons.menu_book_outlined,
+                    color: scheme.secondary,
+                    onTap: () =>
+                        _send('Create revision questions from a past paper'),
+                  ),
+                  _AiToolCard(
+                    title: 'Route me',
+                    subtitle: 'Find the right office or process',
+                    icon: Icons.hub_outlined,
+                    color: const Color(0xFF8B5CF6),
+                    onTap: () =>
+                        _send('Where should I go for retake applications?'),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
               height: 56,
               child: ListView(
                 scrollDirection: Axis.horizontal,
@@ -77,18 +111,30 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                itemCount: _messages.length + (_isThinking ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (_isThinking && index == _messages.length) {
-                    return const _TypingBubble();
-                  }
-                  return _MessageBubble(message: _messages[index])
-                      .animate()
-                      .fadeIn(duration: 220.ms)
-                      .slideY(begin: 0.04, end: 0);
-                },
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  color: scheme.surfaceContainerLow,
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.8),
+                  ),
+                ),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  itemCount: _messages.length + (_isThinking ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (_isThinking && index == _messages.length) {
+                      return const _TypingBubble();
+                    }
+                    return _MessageBubble(message: _messages[index])
+                        .animate()
+                        .fadeIn(duration: 220.ms)
+                        .slideY(begin: 0.04, end: 0);
+                  },
+                ),
               ),
             ),
             Padding(
@@ -112,9 +158,14 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                     onPressed: _send,
                     style: FilledButton.styleFrom(
                       shape: const CircleBorder(),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
+                      backgroundColor: scheme.primary,
+                      shadowColor: scheme.primary.withValues(alpha: 0.4),
+                      elevation: 4,
                     ),
-                    child: const Icon(Icons.send),
+                    child: Icon(
+                      _isThinking ? Icons.hourglass_top : Icons.mic_none,
+                    ),
                   ),
                 ],
               ),
@@ -137,7 +188,7 @@ class _AiHeader extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
           colors: [scheme.primary, scheme.secondary, const Color(0xFF7C3AED)],
           begin: Alignment.topLeft,
@@ -214,6 +265,52 @@ class _QuickPrompt extends StatelessWidget {
   }
 }
 
+class _AiToolCard extends StatelessWidget {
+  const _AiToolCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 190,
+      margin: const EdgeInsets.only(left: 16, right: 2, bottom: 10),
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.14),
+                  child: Icon(icon, color: color),
+                ),
+                const Spacer(),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({required this.message});
 
@@ -233,7 +330,7 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(24),
           border: message.isUser
               ? null
               : Border.all(color: scheme.outlineVariant),
@@ -294,10 +391,7 @@ class _TypingBubble extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox.square(
-                dimension: 14,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              const _ThinkingDots(),
               const SizedBox(width: 10),
               Text(
                 'VU AI is thinking...',
@@ -306,6 +400,38 @@ class _TypingBubble extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ThinkingDots extends StatelessWidget {
+  const _ThinkingDots();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        3,
+        (index) =>
+            Container(
+                  width: 8,
+                  height: 8,
+                  margin: EdgeInsets.only(right: index == 2 ? 0 : 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scheme.primary,
+                  ),
+                )
+                .animate(onPlay: (controller) => controller.repeat())
+                .fadeIn(
+                  duration: 400.ms,
+                  delay: Duration(milliseconds: index * 120),
+                )
+                .then()
+                .fadeOut(duration: 400.ms),
       ),
     );
   }

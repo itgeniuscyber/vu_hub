@@ -29,6 +29,28 @@ class MockAiService implements AiService {
       );
     }
 
+    if (lower.contains('summarize announcement') ||
+        lower.contains('latest notice') ||
+        lower.contains('announcement summary')) {
+      return const AiResponse(
+        answer:
+            'Here is the student-friendly version: identify the key deadline, who is affected, the required action, and the responsible office. Once the Cloud Function AI backend is connected, this card will summarize the exact announcement text automatically.',
+        sources: ['VU Feed', 'announcements collection'],
+        actions: ['Create action checklist', 'Find contact office'],
+      );
+    }
+
+    if (lower.contains('summarize resource') ||
+        lower.contains('summarize this paper') ||
+        lower.contains('study with ai')) {
+      return const AiResponse(
+        answer:
+            'I can turn this resource into revision notes, likely exam questions, flashcards, and a simple topic explanation. The current mock response proves the workflow; production AI should fetch the file text through a secure backend.',
+        sources: ['VU Vault', 'past_papers collection'],
+        actions: ['Generate flashcards', 'Create revision questions'],
+      );
+    }
+
     if (lower.contains('past paper') || lower.contains('study')) {
       return const AiResponse(
         answer:

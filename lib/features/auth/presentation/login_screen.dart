@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      if (mounted) context.go('/app');
     } on FirebaseAuthException catch (error) {
       setState(() => _error = error.message ?? 'Could not sign in.');
     } finally {
@@ -94,10 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     label: const Text('Sign in'),
                   ),
                   const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/app'),
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Explore VU Hub preview'),
+                  Text(
+                    'Sign-in routing now uses `users/{uid}.role` to unlock admin and lecturer tools without reading any password field from Firestore.',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               ),

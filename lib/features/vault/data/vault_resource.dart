@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/utils/firestore_parsing.dart';
+
 class VaultResource {
   const VaultResource({
     required this.id,
@@ -27,23 +29,31 @@ class VaultResource {
     final data = doc.data() ?? {};
     return VaultResource(
       id: doc.id,
-      title: _string(data['subject']) ?? _string(data['title']) ?? 'Past paper',
-      faculty: _string(data['faculty']) ?? 'Victoria University',
-      fileType: _string(data['fileType']) ?? 'pdf',
-      fileUrl: _string(data['fileUrl']) ?? _string(data['url']) ?? '',
-      thumbnailUrl: _string(data['thumbnailUrl']),
-      uploadedBy: _string(data['uploadedBy']) ?? 'VU Hub',
-      uploadedAt: _date(
-        data['uploadedAt'] ?? data['timestamp'] ?? data['createdAt'],
-      ),
+      title: firstString(data, [
+        'subject',
+        'title',
+        'name',
+      ], fallback: 'Past paper'),
+      faculty: firstString(data, [
+        'faculty',
+        'department',
+        'school',
+      ], fallback: 'Victoria University'),
+      fileType: firstString(data, [
+        'fileType',
+        'type',
+        'extension',
+      ], fallback: 'pdf'),
+      fileUrl: firstString(data, ['fileUrl', 'url', 'downloadUrl']),
+      thumbnailUrl:
+          asString(data['thumbnailUrl']) ?? asString(data['previewImageUrl']),
+      uploadedBy: firstString(data, [
+        'uploadedBy',
+        'authorName',
+        'lecturerName',
+        'createdByName',
+      ], fallback: 'VU Hub'),
+      uploadedAt: firstDate(data, ['uploadedAt', 'timestamp', 'createdAt']),
     );
-  }
-
-  static String? _string(Object? value) => value is String ? value : null;
-
-  static DateTime? _date(Object? value) {
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return null;
   }
 }

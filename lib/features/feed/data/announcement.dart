@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/utils/firestore_parsing.dart';
+
 class Announcement {
   const Announcement({
     required this.id,
@@ -23,23 +25,25 @@ class Announcement {
     final data = doc.data() ?? {};
     return Announcement(
       id: doc.id,
-      title: _string(data['title']) ?? 'Untitled announcement',
-      content: _string(data['content']) ?? _string(data['body']) ?? '',
-      category: _string(data['category']) ?? 'General',
-      publishedBy:
-          _string(data['publishedBy']) ?? _string(data['author']) ?? 'VU',
-      createdAt: _date(
-        data['timestamp'] ?? data['createdAt'] ?? data['publishedAt'],
-      ),
-      isPinned: data['isPinned'] == true || data['pinned'] == true,
+      title: firstString(data, [
+        'title',
+        'headline',
+        'subject',
+      ], fallback: 'Untitled announcement'),
+      content: firstString(data, [
+        'content',
+        'body',
+        'description',
+      ], fallback: ''),
+      category: firstString(data, ['category', 'type'], fallback: 'General'),
+      publishedBy: firstString(data, [
+        'publishedBy',
+        'author',
+        'authorName',
+        'createdByName',
+      ], fallback: 'VU'),
+      createdAt: firstDate(data, ['timestamp', 'createdAt', 'publishedAt']),
+      isPinned: firstBool(data, ['isPinned', 'pinned']),
     );
-  }
-
-  static String? _string(Object? value) => value is String ? value : null;
-
-  static DateTime? _date(Object? value) {
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return null;
   }
 }

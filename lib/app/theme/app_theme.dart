@@ -50,8 +50,9 @@ class AppTheme {
         color: scheme.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(
             color: scheme.outlineVariant.withValues(alpha: 0.55),
           ),
@@ -59,17 +60,42 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         side: BorderSide.none,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        selectedColor: scheme.primary.withValues(alpha: 0.14),
+        backgroundColor: scheme.surfaceContainer,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        fillColor: scheme.surfaceContainer,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.8),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: scheme.primary),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
+        backgroundColor: scheme.surface,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
