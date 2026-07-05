@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        userDoc().data.role in role;
+    }
+
+    function admin() {
+      return hasRole(['admin', 'administrator']);
+    }
+
+    function lecturer() {
+      return hasRole(['lecturer', 'teacher']);
+    }
+
+    function guildOfficial() {
+      return hasRole(['guild', 'guild_official', 'guild official', 'guildOfficial']);
+    }
+
+    function staffUploader() {
+      return admin() || lecturer();
+    }
+
+    function noPasswordField() {
+      return !('password' in request.resource.data);
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || admin());
+      allow create: if signedIn() &&
+        request.auth.uid == userId &&
+        noPasswordField() &&
+        (!('role' in request.resource.data) || request.resource.data.role == 'student');
+      allow update: if signedIn() &&
+        noPasswordField() &&
+        (
+          admin() ||
+          (
+            request.auth.uid == userId &&
+            !request.resource.data.diff(resource.data).changedKeys().hasAny(['role', 'userRole', 'accountType'])
+          )
+        );
+      allow delete: if admin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin();
+    }
+
+    match /past_papers/{paperId} {
+      allow read: if signedIn();
+      allow create, update, delete: if staffUploader();
+    }
+
+    match /vu_resources/{resourceId} {
+      allow read: if signedIn();
+      allow create, update, delete: if staffUploader();
+    }
+
+    match /departments/{departmentId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin();
+    }
+
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin() || lecturer();
+    }
+
+    match /guild_posts/{postId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin() || guildOfficial();
+    }
+
+    match /guild_feedback/{feedbackId} {
+      allow read: if admin() || guildOfficial();
+      allow create: if signedIn();
+      allow update, delete: if admin() || guildOfficial();
+    }
+
+    match /public_chat/{messageId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if admin() ||
+        (signedIn() && resource.data.senderId == request.auth.uid);
+    }
+
+    match /private_chats/{chatId} {
+      allow read, create, update: if signedIn() &&
+        (request.auth.uid in resource.data.participants ||
+         request.auth.uid in request.resource.data.participants);
+      allow delete: if admin();
+    }
+
+    match /discussions/{discussionId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if admin() ||
+        (signedIn() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if admin() ||
+        (signedIn() && resource.data.authorId == request.auth.uid);
+    }
+
+    match /friend_requests/{requestId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    match /friendships/{friendshipId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    match /ai_faqs/{faqId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin();
+    }
+
+    match /ai_queries/{queryId} {
+      allow read: if admin() || request.auth.uid == resource.data.userId;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if admin();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if admin();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

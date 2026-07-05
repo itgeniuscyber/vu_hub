@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return signedIn() &&
+        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+        userDoc().data.role in role;
+    }
+
+    function staffUploader() {
+      return hasRole(['admin', 'administrator', 'lecturer', 'teacher']);
+    }
+
+    match /past_papers/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if staffUploader() && request.auth.uid == userId;
+    }
+
+    match /resources/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if staffUploader() && request.auth.uid == userId;
+    }
+
+    match /profile_images/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../auth/data/app_session.dart';
+import '../../auth/data/user_profile.dart';
 import '../../feed/data/announcement.dart';
 import '../../feed/data/announcement_repository.dart';
 import '../../live/data/campus_event.dart';
 import '../../live/data/events_repository.dart';
+import '../../shell/presentation/app_navigation_scope.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,24 +21,29 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final navigation = AppNavigationScope.of(context);
+    final session = context.watch<AppSession>();
     final cards = [
       _QuickAction(
         icon: Icons.auto_awesome,
         title: 'Ask VU AI',
         subtitle: 'Campus help, summaries, study support',
         color: scheme.primary,
+        onTap: () => navigation.onSelectTab(3),
       ),
       _QuickAction(
         icon: Icons.folder_copy,
         title: 'Past papers',
         subtitle: 'Open VU Vault resources',
         color: scheme.secondary,
+        onTap: () => navigation.onSelectTab(2),
       ),
       _QuickAction(
         icon: Icons.support_agent,
         title: 'Help desk',
         subtitle: 'Find the right office faster',
         color: const Color(0xFF22C55E),
+        onTap: () => navigation.onSelectTab(4),
       ),
     ];
 
@@ -49,35 +58,53 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
                 sliver: SliverList.list(
                   children: [
-                    _HeroHeader(scheme: scheme),
+                    _HeroHeader(scheme: scheme, session: session),
                     const SizedBox(height: 22),
-                    GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 0.92,
-                      children: [
-                        MetricCard(
-                          icon: Icons.campaign,
-                          label: 'Latest notices',
-                          value: 'Feed',
-                          color: scheme.primary,
-                        ),
-                        MetricCard(
-                          icon: Icons.event_available,
-                          label: 'Campus events',
-                          value: 'Live',
-                          color: const Color(0xFFFBBF24),
-                        ),
-                        MetricCard(
-                          icon: Icons.chat_bubble,
-                          label: 'Community',
-                          value: 'Chat',
-                          color: scheme.secondary,
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = constraints.maxWidth >= 720
+                            ? 3
+                            : 2;
+                        return GridView.count(
+                          crossAxisCount: crossAxisCount,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: constraints.maxWidth >= 720
+                              ? 1.15
+                              : 1.05,
+                          children: [
+                            _MetricAction(
+                              onTap: () => navigation.onSelectTab(1),
+                              child: MetricCard(
+                                icon: Icons.campaign,
+                                label: 'Latest notices',
+                                value: 'Feed',
+                                color: scheme.primary,
+                              ),
+                            ),
+                            _MetricAction(
+                              onTap: () => navigation.onSelectTab(4),
+                              child: const MetricCard(
+                                icon: Icons.event_available,
+                                label: 'Campus events',
+                                value: 'Live',
+                                color: Color(0xFFFBBF24),
+                              ),
+                            ),
+                            _MetricAction(
+                              onTap: () => navigation.onSelectTab(4),
+                              child: MetricCard(
+                                icon: Icons.chat_bubble,
+                                label: 'Community',
+                                value: 'Chat',
+                                color: scheme.secondary,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     const SectionHeader(title: 'Quick actions'),
@@ -113,12 +140,16 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.scheme});
+  const _HeroHeader({required this.scheme, required this.session});
 
   final ColorScheme scheme;
+  final AppSession session;
 
   @override
   Widget build(BuildContext context) {
+    final name = session.profile?.displayName.trim().isNotEmpty == true
+        ? session.profile!.displayName.trim().split(' ').first
+        : 'Student';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -146,7 +177,7 @@ class _HeroHeader extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Good evening, Student',
+            'Good evening, $name',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(color: Colors.white),
@@ -158,9 +189,56 @@ class _HeroHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.86),
             ),
           ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroChip(
+                label: _roleLabel(session.role),
+                icon: Icons.verified_user,
+              ),
+              if (session.canPublishAnnouncements)
+                const _HeroChip(label: 'Can publish', icon: Icons.campaign),
+              if (session.canUploadResources)
+                const _HeroChip(label: 'Can upload', icon: Icons.cloud_upload),
+            ],
+          ),
         ],
       ),
     ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.08, end: 0);
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  const _HeroChip({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -170,27 +248,64 @@ class _QuickAction extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        minVerticalPadding: 16,
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.14),
-          child: Icon(icon, color: color),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: ListTile(
+          minVerticalPadding: 16,
+          leading: CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.14),
+            child: Icon(icon, color: color),
+          ),
+          title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          subtitle: Text(subtitle),
+          trailing: Icon(Icons.chevron_right, color: color),
         ),
-        title: Text(title, style: Theme.of(context).textTheme.titleMedium),
-        subtitle: Text(subtitle),
-        trailing: Icon(Icons.chevron_right, color: color),
       ),
     );
+  }
+}
+
+class _MetricAction extends StatelessWidget {
+  const _MetricAction({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: child,
+    );
+  }
+}
+
+String _roleLabel(AppUserRole role) {
+  switch (role) {
+    case AppUserRole.admin:
+      return 'Admin';
+    case AppUserRole.lecturer:
+      return 'Lecturer';
+    case AppUserRole.guildOfficial:
+      return 'Guild official';
+    case AppUserRole.unknown:
+      return 'Role pending';
+    case AppUserRole.student:
+      return 'Student';
   }
 }
 
