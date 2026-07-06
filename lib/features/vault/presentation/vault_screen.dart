@@ -242,12 +242,17 @@ class _VaultResourceCard extends StatelessWidget {
                 height: 96,
                 color: scheme.primary.withValues(alpha: 0.12),
                 child: resource.thumbnailUrl == null
-                    ? Icon(Icons.picture_as_pdf, color: scheme.primary)
+                    ? Image.asset(
+                        'assets/images/vu_default_card.png',
+                        fit: BoxFit.cover,
+                      )
                     : CachedNetworkImage(
                         imageUrl: resource.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        errorWidget: (_, _, _) =>
-                            Icon(Icons.picture_as_pdf, color: scheme.primary),
+                        errorWidget: (_, _, _) => Image.asset(
+                          'assets/images/vu_default_card.png',
+                          fit: BoxFit.cover,
+                        ),
                       ),
               ),
             ),
@@ -328,6 +333,7 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
   final _thumbnailUrlController = TextEditingController();
 
   PlatformFile? _selectedFile;
+  PlatformFile? _selectedThumbnail;
   String _fileType = 'pdf';
   bool _isSaving = false;
 
@@ -355,6 +361,16 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
         _fileType = extension;
       }
     });
+  }
+
+  Future<void> _pickThumbnail() async {
+    final result = await FilePicker.platform.pickFiles(
+      withData: true,
+      allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+      type: FileType.custom,
+    );
+    if (!mounted || result == null || result.files.isEmpty) return;
+    setState(() => _selectedThumbnail = result.files.single);
   }
 
   Future<void> _upload() async {
@@ -385,6 +401,8 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
         fileBytes: _selectedFile?.bytes,
         externalFileUrl: _externalUrlController.text,
         thumbnailUrl: _thumbnailUrlController.text,
+        thumbnailBytes: _selectedThumbnail?.bytes,
+        thumbnailFileName: _selectedThumbnail?.name,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
@@ -459,6 +477,16 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
                 icon: const Icon(Icons.attach_file),
                 label: Text(
                   _selectedFile == null ? 'Pick file' : _selectedFile!.name,
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _pickThumbnail,
+                icon: const Icon(Icons.image_outlined),
+                label: Text(
+                  _selectedThumbnail == null
+                      ? 'Pick thumbnail image'
+                      : _selectedThumbnail!.name,
                 ),
               ),
               const SizedBox(height: 12),

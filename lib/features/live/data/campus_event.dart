@@ -15,6 +15,7 @@ class CampusEvent {
     required this.endTime,
     required this.category,
     required this.isFeatured,
+    required this.imageUrl,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class CampusEvent {
   final DateTime? endTime;
   final String category;
   final bool isFeatured;
+  final String? imageUrl;
 
   CampusEventStatus get status {
     final now = DateTime.now();
@@ -74,6 +76,13 @@ class CampusEvent {
       endTime: firstDate(data, ['endTime', 'endsAt', 'finishTime']),
       category: firstString(data, ['category', 'type'], fallback: 'General'),
       isFeatured: firstBool(data, ['isFeatured', 'featured', 'highlighted']),
+      imageUrl: firstString(data, [
+        'imageUrl',
+        'image',
+        'coverImage',
+        'thumbnailUrl',
+        'photoUrl',
+      ]),
     );
   }
 }

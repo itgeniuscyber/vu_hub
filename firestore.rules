@@ -36,12 +36,23 @@ service cloud.firestore {
       return !('password' in request.resource.data);
     }
 
+    function validRegistrationCodeFor(role) {
+      return ('registrationCode' in request.resource.data) &&
+        exists(/databases/$(database)/documents/registration_codes/$(request.resource.data.registrationCode)) &&
+        get(/databases/$(database)/documents/registration_codes/$(request.resource.data.registrationCode)).data.active == true &&
+        get(/databases/$(database)/documents/registration_codes/$(request.resource.data.registrationCode)).data.role == role;
+    }
+
     match /users/{userId} {
       allow read: if signedIn() && (request.auth.uid == userId || admin());
       allow create: if signedIn() &&
         request.auth.uid == userId &&
         noPasswordField() &&
-        (!('role' in request.resource.data) || request.resource.data.role == 'student');
+        (
+          !('role' in request.resource.data) ||
+          request.resource.data.role == 'student' ||
+          validRegistrationCodeFor(request.resource.data.role)
+        );
       allow update: if signedIn() &&
         noPasswordField() &&
         (
@@ -52,6 +63,12 @@ service cloud.firestore {
           )
         );
       allow delete: if admin();
+    }
+
+    match /registration_codes/{code} {
+      allow get: if signedIn();
+      allow list: if admin();
+      allow create, update, delete: if admin();
     }
 
     match /announcements/{announcementId} {

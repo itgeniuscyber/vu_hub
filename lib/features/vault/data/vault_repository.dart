@@ -37,6 +37,8 @@ class VaultRepository {
     Uint8List? fileBytes,
     String? externalFileUrl,
     String? thumbnailUrl,
+    Uint8List? thumbnailBytes,
+    String? thumbnailFileName,
   }) async {
     var resolvedFileUrl = externalFileUrl?.trim() ?? '';
     if (resolvedFileUrl.isEmpty) {
@@ -57,13 +59,32 @@ class VaultRepository {
       resolvedFileUrl = await task.ref.getDownloadURL();
     }
 
+    var resolvedThumbnailUrl = thumbnailUrl?.trim();
+    if ((resolvedThumbnailUrl == null || resolvedThumbnailUrl.isEmpty) &&
+        thumbnailBytes != null &&
+        thumbnailBytes.isNotEmpty) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeName = (thumbnailFileName ?? 'thumbnail.png').replaceAll(
+        RegExp(r'[^A-Za-z0-9._-]'),
+        '_',
+      );
+      final ref = (_storage ?? FirebaseStorage.instance).ref(
+        'resources/$uploaderId/thumbnails/$timestamp-$safeName',
+      );
+      final task = await ref.putData(
+        thumbnailBytes,
+        SettableMetadata(contentType: 'image/*'),
+      );
+      resolvedThumbnailUrl = await task.ref.getDownloadURL();
+    }
+
     await _firestore.collection('past_papers').add({
       'subject': title.trim(),
       'title': title.trim(),
       'faculty': faculty.trim(),
       'fileType': fileType.trim().toLowerCase(),
       'fileUrl': resolvedFileUrl,
-      'thumbnailUrl': thumbnailUrl?.trim(),
+      'thumbnailUrl': resolvedThumbnailUrl,
       'uploadedBy': uploadedBy.trim().isEmpty ? 'VU Staff' : uploadedBy.trim(),
       'uploadedById': uploaderId,
       'uploadedAt': FieldValue.serverTimestamp(),

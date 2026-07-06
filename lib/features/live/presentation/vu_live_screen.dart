@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -96,58 +97,101 @@ class _FeaturedEventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final start = event.startTime;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [scheme.primary, scheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
         children: [
-          Row(
-            children: [
-              const Chip(label: Text('Featured')),
-              const Spacer(),
-              Icon(Icons.podcasts, color: Colors.white.withValues(alpha: 0.92)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            event.title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            event.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
+          Positioned.fill(child: _EventImage(event: event)),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.68),
+                    scheme.primary.withValues(alpha: 0.42),
+                  ],
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Pill(label: event.location, icon: Icons.location_on_outlined),
-              _Pill(
-                label: start == null
-                    ? 'Date TBC'
-                    : DateFormat('EEE, MMM d • HH:mm').format(start),
-                icon: Icons.schedule,
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Chip(label: Text('Featured')),
+                    const Spacer(),
+                    Icon(
+                      Icons.podcasts,
+                      color: Colors.white.withValues(alpha: 0.92),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 44),
+                Text(
+                  event.title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  event.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _Pill(
+                      label: event.location,
+                      icon: Icons.location_on_outlined,
+                    ),
+                    _Pill(
+                      label: start == null
+                          ? 'Date TBC'
+                          : DateFormat('EEE, MMM d • HH:mm').format(start),
+                      icon: Icons.schedule,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EventImage extends StatelessWidget {
+  const _EventImage({required this.event});
+
+  final CampusEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = event.imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Image.asset(
+        'assets/images/vu_default_card.png',
+        fit: BoxFit.cover,
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      errorWidget: (_, _, _) =>
+          Image.asset('assets/images/vu_default_card.png', fit: BoxFit.cover),
     );
   }
 }
@@ -219,68 +263,92 @@ class _EventTile extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Chip(
-                  avatar: Icon(Icons.circle, color: statusColor, size: 12),
-                  label: Text(label),
-                ),
-                const Spacer(),
-                Text(
-                  event.category,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 92,
+                height: 108,
+                child: _EventImage(event: event),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(event.title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Text(
-              event.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(
-                  avatar: const Icon(Icons.schedule, size: 16),
-                  label: Text(
-                    start == null
-                        ? 'Date TBC'
-                        : DateFormat('MMM d • HH:mm').format(start),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Chip(
+                        avatar: Icon(
+                          Icons.circle,
+                          color: statusColor,
+                          size: 12,
+                        ),
+                        label: Text(label),
+                      ),
+                      const Spacer(),
+                      Text(
+                        event.category,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
-                ),
-                Chip(
-                  avatar: const Icon(Icons.place_outlined, size: 16),
-                  label: Text(event.location),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                FilledButton.icon(
-                  onPressed: event.streamUrl == null || event.streamUrl!.isEmpty
-                      ? null
-                      : _openStream,
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Open stream'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.notifications_active_outlined),
-                  label: const Text('Remind me'),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    event.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    event.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.schedule, size: 16),
+                        label: Text(
+                          start == null
+                              ? 'Date TBC'
+                              : DateFormat('MMM d • HH:mm').format(start),
+                        ),
+                      ),
+                      Chip(
+                        avatar: const Icon(Icons.place_outlined, size: 16),
+                        label: Text(event.location),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed:
+                            event.streamUrl == null || event.streamUrl!.isEmpty
+                            ? null
+                            : _openStream,
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Open stream'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        label: const Text('Remind me'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

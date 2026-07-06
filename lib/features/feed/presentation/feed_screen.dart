@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/firestore_error_message.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/firestore_error_state.dart';
-import '../../../core/widgets/section_header.dart';
 import '../../ai_desk/presentation/ai_insight_sheet.dart';
 import '../../auth/data/app_session.dart';
 import '../data/announcement.dart';
@@ -20,6 +19,7 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   String _selectedCategory = 'All';
+  String _query = '';
 
   static const _categories = [
     'All',
@@ -33,6 +33,7 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<AppSession>();
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -40,22 +41,20 @@ class _FeedScreenState extends State<FeedScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SectionHeader(
-                title: 'VU Feed',
-                action: session.canPublishAnnouncements
-                    ? FilledButton.icon(
-                        onPressed: () => _openPublisher(context, session),
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Publish'),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Official notices, guild updates, and urgent campus communication.',
-                style: Theme.of(context).textTheme.bodyMedium,
+              _FeedHero(
+                canPublish: session.canPublishAnnouncements,
+                onPublish: () => _openPublisher(context, session),
+                scheme: scheme,
               ),
               const SizedBox(height: 16),
+              TextField(
+                onChanged: (value) => setState(() => _query = value.trim()),
+                decoration: const InputDecoration(
+                  hintText: 'Search notices, deadlines, offices...',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 12),
               _CategoryBar(
                 selected: _selectedCategory,
                 onSelected: (value) =>
@@ -83,6 +82,14 @@ class _FeedScreenState extends State<FeedScreen> {
                               _selectedCategory == 'All' ||
                               item.category == _selectedCategory,
                         )
+                        .where((item) {
+                          if (_query.isEmpty) return true;
+                          final needle = _query.toLowerCase();
+                          return item.title.toLowerCase().contains(needle) ||
+                              item.content.toLowerCase().contains(needle) ||
+                              item.category.toLowerCase().contains(needle) ||
+                              item.publishedBy.toLowerCase().contains(needle);
+                        })
                         .toList();
                     if (items.isEmpty) {
                       return const EmptyState(
@@ -122,6 +129,90 @@ class _FeedScreenState extends State<FeedScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Announcement published successfully.')),
     );
+  }
+}
+
+class _FeedHero extends StatelessWidget {
+  const _FeedHero({
+    required this.canPublish,
+    required this.onPublish,
+    required this.scheme,
+  });
+
+  final bool canPublish;
+  final VoidCallback onPublish;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/vu_default_card.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.68),
+                    scheme.primary.withValues(alpha: 0.44),
+                  ],
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.verified, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Official campus communication',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelLarge?.copyWith(color: Colors.white),
+                    ),
+                    const Spacer(),
+                    if (canPublish)
+                      FilledButton.icon(
+                        onPressed: onPublish,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Publish'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 34),
+                Text(
+                  'VU Feed',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Announcements, guild updates, urgent notices, and AI-ready summaries in one trusted space.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 320.ms).slideY(begin: 0.05, end: 0);
   }
 }
 
@@ -311,10 +402,28 @@ class _AnnouncementCard extends StatelessWidget {
                 if (item.isPinned) Icon(Icons.push_pin, color: scheme.primary),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(item.title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(item.content, maxLines: 3, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.account_circle_outlined, size: 16),
+                  label: Text(item.publishedBy),
+                ),
+                if (item.createdAt != null)
+                  Chip(
+                    avatar: const Icon(Icons.schedule, size: 16),
+                    label: Text(
+                      '${item.createdAt!.day}/${item.createdAt!.month}/${item.createdAt!.year}',
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () => showAiInsightSheet(

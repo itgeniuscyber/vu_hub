@@ -8,12 +8,16 @@ class UserProfile {
     required this.role,
     required this.displayName,
     required this.email,
+    this.faculty = '',
+    this.regNo = '',
   });
 
   final String uid;
   final AppUserRole role;
   final String displayName;
   final String email;
+  final String faculty;
+  final String regNo;
 
   bool get canPublishAnnouncements => role == AppUserRole.admin;
 
@@ -40,6 +44,12 @@ class UserProfile {
         'username',
       ], fallback: 'VU User'),
       email: firstString(data, ['email'], fallback: ''),
+      faculty: firstString(data, ['faculty', 'school'], fallback: ''),
+      regNo: firstString(data, [
+        'regNo',
+        'registrationNumber',
+        'studentNo',
+      ], fallback: ''),
     );
   }
 
@@ -54,6 +64,20 @@ class UserProfile {
       displayName: displayName,
       email: email,
     );
+  }
+
+  static String roleKey(AppUserRole role) {
+    switch (role) {
+      case AppUserRole.admin:
+        return 'admin';
+      case AppUserRole.lecturer:
+        return 'lecturer';
+      case AppUserRole.guildOfficial:
+        return 'guild';
+      case AppUserRole.unknown:
+      case AppUserRole.student:
+        return 'student';
+    }
   }
 
   static AppUserRole _parseRole(String raw) {

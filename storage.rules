@@ -25,7 +25,7 @@ service firebase.storage {
       allow write: if staffUploader() && request.auth.uid == userId;
     }
 
-    match /resources/{userId}/{fileName} {
+    match /resources/{userId}/{allPaths=**} {
       allow read: if signedIn();
       allow write: if staffUploader() && request.auth.uid == userId;
     }
