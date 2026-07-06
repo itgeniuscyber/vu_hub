@@ -3,12 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../auth/data/app_session.dart';
-import '../../auth/data/user_profile.dart';
 import '../../feed/data/announcement.dart';
 import '../../feed/data/announcement_repository.dart';
 import '../../live/data/campus_event.dart';
@@ -60,6 +60,8 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     _HeroHeader(scheme: scheme, session: session),
                     const SizedBox(height: 22),
+                    _StoryStrip(scheme: scheme),
+                    const SizedBox(height: 18),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final crossAxisCount = constraints.maxWidth >= 720
@@ -150,95 +152,110 @@ class _HeroHeader extends StatelessWidget {
     final name = session.profile?.displayName.trim().isNotEmpty == true
         ? session.profile!.displayName.trim().split(' ').first
         : 'Student';
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          colors: [scheme.primary, scheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return FeatureHeroBanner(
+      title: 'Good evening, $name',
+      subtitle:
+          'Your campus command center for announcements, resources, events, and AI-powered support.',
+      icon: Icons.school,
+      scheme: scheme,
+      badge: 'Victoria University',
+      height: 232,
+      trailing: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.school, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'Victoria University',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Good evening, $name',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your campus command center for announcements, resources, events, and AI-powered support.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.86),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _HeroChip(
-                label: _roleLabel(session.role),
-                icon: Icons.verified_user,
-              ),
-              if (session.canPublishAnnouncements)
-                const _HeroChip(label: 'Can publish', icon: Icons.campaign),
-              if (session.canUploadResources)
-                const _HeroChip(label: 'Can upload', icon: Icons.cloud_upload),
-            ],
-          ),
-        ],
+        child: const Icon(Icons.notifications_none, color: Colors.white),
       ),
     ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.08, end: 0);
   }
 }
 
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label, required this.icon});
+class _StoryStrip extends StatelessWidget {
+  const _StoryStrip({required this.scheme});
 
-  final String label;
-  final IconData icon;
+  final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(color: Colors.white),
+    return SizedBox(
+      height: 92,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: const [
+          _StoryBubble(
+            label: 'Live now',
+            icon: Icons.podcasts,
+            highlighted: true,
           ),
+          _StoryBubble(label: 'Guild', icon: Icons.groups_2_outlined),
+          _StoryBubble(label: 'Events', icon: Icons.celebration_outlined),
+          _StoryBubble(label: 'AI Tips', icon: Icons.auto_awesome),
+          _StoryBubble(label: 'Support', icon: Icons.support_agent),
         ],
       ),
     );
+  }
+}
+
+class _StoryBubble extends StatelessWidget {
+  const _StoryBubble({
+    required this.label,
+    required this.icon,
+    this.highlighted = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 14),
+      child: Column(
+        children: [
+          Container(
+            width: 62,
+            height: 62,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: highlighted
+                  ? LinearGradient(
+                      colors: [
+                        scheme.primary,
+                        scheme.secondary,
+                        scheme.tertiary,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: highlighted ? null : scheme.surfaceContainerHighest,
+            ),
+            padding: const EdgeInsets.all(2),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: highlighted
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : scheme.surface,
+              ),
+              child: Icon(
+                icon,
+                color: highlighted ? Colors.white : scheme.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.08, end: 0);
   }
 }
 
@@ -263,15 +280,41 @@ class _QuickAction extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: ListTile(
-          minVerticalPadding: 16,
-          leading: CircleAvatar(
-            backgroundColor: color.withValues(alpha: 0.14),
-            child: Icon(icon, color: color),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: color.withValues(alpha: 0.14),
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(subtitle),
+                  ],
+                ),
+              ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.12),
+                ),
+                child: Icon(Icons.chevron_right, color: color),
+              ),
+            ],
           ),
-          title: Text(title, style: Theme.of(context).textTheme.titleMedium),
-          subtitle: Text(subtitle),
-          trailing: Icon(Icons.chevron_right, color: color),
         ),
       ),
     );
@@ -291,21 +334,6 @@ class _MetricAction extends StatelessWidget {
       onTap: onTap,
       child: child,
     );
-  }
-}
-
-String _roleLabel(AppUserRole role) {
-  switch (role) {
-    case AppUserRole.admin:
-      return 'Admin';
-    case AppUserRole.lecturer:
-      return 'Lecturer';
-    case AppUserRole.guildOfficial:
-      return 'Guild official';
-    case AppUserRole.unknown:
-      return 'Role pending';
-    case AppUserRole.student:
-      return 'Student';
   }
 }
 
@@ -349,8 +377,20 @@ class _DashboardEventCard extends StatelessWidget {
           );
         }
         return Card(
-          child: Padding(
+          child: Container(
             padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: [
+                  scheme.primary.withValues(alpha: 0.08),
+                  scheme.secondary.withValues(alpha: 0.06),
+                  scheme.surface,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -39,3 +39,23 @@ class FeedbackInsight {
   final int count;
   final String description;
 }
+
+class GuildCabinetMember {
+  const GuildCabinetMember({
+    required this.role,
+    required this.office,
+    required this.scope,
+    required this.contactHint,
+    required this.iconCodePoint,
+    this.name,
+    this.isExecutive = false,
+  });
+
+  final String role;
+  final String office;
+  final String scope;
+  final String contactHint;
+  final int iconCodePoint;
+  final String? name;
+  final bool isExecutive;
+}

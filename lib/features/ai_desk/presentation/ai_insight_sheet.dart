@@ -31,7 +31,7 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
   @override
   void initState() {
     super.initState();
-    _response = MockAiService().ask(widget.prompt);
+    _response = FirebaseAiService().ask(widget.prompt);
   }
 
   @override

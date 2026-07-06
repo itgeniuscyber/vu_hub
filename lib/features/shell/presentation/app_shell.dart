@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 import '../../ai_desk/presentation/ai_desk_screen.dart';
 import '../../feed/presentation/feed_screen.dart';
@@ -80,19 +81,24 @@ class _AppShellState extends State<AppShell> {
           }
 
           return Scaffold(
-            body: content,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (value) => setState(() => _index = value),
-              destinations: destinations
-                  .map(
-                    (item) => NavigationDestination(
-                      icon: Icon(item.icon),
-                      selectedIcon: Icon(item.selectedIcon),
-                      label: item.label,
-                    ),
-                  )
-                  .toList(),
+            extendBody: true,
+            body: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 102),
+                  child: content,
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 18,
+                  child: _FloatingBottomBar(
+                    selectedIndex: _index,
+                    destinations: destinations,
+                    onSelected: (value) => setState(() => _index = value),
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -139,4 +145,104 @@ class _ShellDestination {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+}
+
+class _FloatingBottomBar extends StatelessWidget {
+  const _FloatingBottomBar({
+    required this.selectedIndex,
+    required this.destinations,
+    required this.onSelected,
+  });
+
+  final int selectedIndex;
+  final List<_ShellDestination> destinations;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: List.generate(destinations.length, (index) {
+              final item = destinations[index];
+              final selected = selectedIndex == index;
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: selected
+                        ? LinearGradient(
+                            colors: [
+                              scheme.primary.withValues(alpha: 0.18),
+                              scheme.secondary.withValues(alpha: 0.16),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => onSelected(index),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            selected ? item.selectedIcon : item.icon,
+                            color: selected
+                                ? scheme.primary
+                                : scheme.onSurface.withValues(alpha: 0.72),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: selected
+                                      ? scheme.primary
+                                      : scheme.onSurface.withValues(alpha: 0.68),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
 }

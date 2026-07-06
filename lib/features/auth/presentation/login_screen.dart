@@ -2,7 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:ui';
+
+import 'auth_shared.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _error;
 
   @override
@@ -43,56 +45,51 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/images/vu_auth_hero.png', fit: BoxFit.cover),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.66),
-                  scheme.primary.withValues(alpha: 0.42),
-                  scheme.surface.withValues(alpha: 0.94),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1080),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final wide = constraints.maxWidth >= 820;
-                      final form = _LoginPanel(
-                        emailController: _emailController,
-                        passwordController: _passwordController,
-                        isLoading: _isLoading,
-                        error: _error,
-                        onSignIn: _signIn,
-                      );
-                      if (!wide) return form;
-                      return Row(
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 900;
+                    final form = _LoginPanel(
+                      emailController: _emailController,
+                      passwordController: _passwordController,
+                      isLoading: _isLoading,
+                      obscurePassword: _obscurePassword,
+                      error: _error,
+                      onTogglePassword: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      onSignIn: _signIn,
+                    );
+                    if (!wide) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Expanded(child: _AuthStory()),
-                          const SizedBox(width: 24),
-                          SizedBox(width: 430, child: form),
+                          const _MobileAuthIntro(),
+                          const SizedBox(height: 18),
+                          form,
                         ],
                       );
-                    },
-                  ),
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Expanded(child: _AuthStory()),
+                        const SizedBox(width: 28),
+                        SizedBox(width: 440, child: form),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -103,48 +100,71 @@ class _AuthStory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white.withValues(alpha: 0.16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-          ),
-          child: const Icon(Icons.school, color: Colors.white, size: 38),
+    return const AuthShowcasePanel(
+      eyebrow: 'Victoria University Digital Campus',
+      title: 'Sign in and step into a smoother campus experience.',
+      subtitle:
+          'Access official notices, VU Vault resources, live campus moments, and AI support from one secure student-first hub.',
+      tags: ['AI Desk', 'Live events', 'Verified feed', 'VU Vault'],
+      highlights: [
+        AuthHighlight(
+          icon: Icons.lock_outline,
+          title: 'Secure university access',
+          subtitle:
+              'Authentication stays in Firebase Auth, while app roles are read safely from your campus profile.',
         ),
-        const SizedBox(height: 24),
-        Text(
-          'VU Hub',
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: Colors.white,
-            fontSize: 42,
-          ),
+        AuthHighlight(
+          icon: Icons.auto_awesome,
+          title: 'Smart campus shortcuts',
+          subtitle:
+              'Jump from sign-in to announcements, departments, AI help, and events with less friction.',
         ),
-        const SizedBox(height: 12),
-        Text(
-          'Campus communication, resources, live events, and AI support in one secure university app.',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.9),
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: const [
-            _GlassPill(icon: Icons.auto_awesome, label: 'AI Desk'),
-            _GlassPill(icon: Icons.folder_copy, label: 'VU Vault'),
-            _GlassPill(icon: Icons.campaign, label: 'Verified Feed'),
-          ],
+        AuthHighlight(
+          icon: Icons.live_tv_outlined,
+          title: 'Live campus energy',
+          subtitle:
+              'Discover streams, activities, and official events happening around Victoria University.',
         ),
       ],
-    ).animate().fadeIn(duration: 420.ms).slideX(begin: -0.05, end: 0);
+    );
+  }
+}
+
+class _MobileAuthIntro extends StatelessWidget {
+  const _MobileAuthIntro();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          colors: [scheme.primary, scheme.secondary, scheme.tertiary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome to VU Hub',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'A premium campus app for notices, resources, live events, and AI support.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.88),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 320.ms).slideY(begin: 0.05, end: 0);
   }
 }
 
@@ -153,117 +173,127 @@ class _LoginPanel extends StatelessWidget {
     required this.emailController,
     required this.passwordController,
     required this.isLoading,
+    required this.obscurePassword,
     required this.error,
+    required this.onTogglePassword,
     required this.onSignIn,
   });
 
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final bool isLoading;
+  final bool obscurePassword;
   final String? error;
+  final VoidCallback onTogglePassword;
   final VoidCallback onSignIn;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.surface.withValues(alpha: 0.9),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Sign in with your university account to continue.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 22),
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'University email',
-                    prefixIcon: Icon(Icons.mail_outline),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  onSubmitted: (_) => onSignIn(),
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(error!, style: TextStyle(color: scheme.error)),
-                ],
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: isLoading ? null : onSignIn,
-                  icon: isLoading
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.login),
-                  label: const Text('Sign in'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/register'),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Create secure account'),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/onboarding'),
-                  child: const Text('View onboarding'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 360.ms).slideY(begin: 0.06, end: 0);
-  }
-}
-
-class _GlassPill extends StatelessWidget {
-  const _GlassPill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-      ),
-      child: Row(
+    return AuthGlassPane(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Sign in with your university account to continue.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => context.go('/onboarding'),
+                icon: const Icon(Icons.slideshow_outlined),
+                tooltip: 'View onboarding',
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const AuthInfoBanner(
+            icon: Icons.verified_user_outlined,
+            title: 'Secure sign-in',
+            message:
+                'Roles come from your profile at users/{uid}. Passwords stay in Firebase Authentication and are never displayed from Firestore.',
+          ),
+          const SizedBox(height: 20),
+          const AuthSectionTitle(
+            title: 'Account details',
+            subtitle: 'Use the same email and password you created for VU Hub.',
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'University email',
+              prefixIcon: Icon(Icons.mail_outline),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: passwordController,
+            obscureText: obscurePassword,
+            onSubmitted: (_) => onSignIn(),
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                onPressed: onTogglePassword,
+                icon: Icon(
+                  obscurePassword ? Icons.visibility_off : Icons.visibility,
+                ),
+              ),
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Text(error!, style: TextStyle(color: scheme.error)),
+          ],
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: isLoading ? null : onSignIn,
+            icon: isLoading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.login),
+            label: const Text('Sign in'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.go('/register'),
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Create secure account'),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.support_agent, color: scheme.primary, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Need help? Start with onboarding or contact the campus ICT team for account issues.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 360.ms).slideY(begin: 0.06, end: 0);
   }
 }

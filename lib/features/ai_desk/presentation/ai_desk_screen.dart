@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:ui';
 
 import '../data/ai_service.dart';
 
@@ -12,7 +13,8 @@ class AiDeskScreen extends StatefulWidget {
 
 class _AiDeskScreenState extends State<AiDeskScreen> {
   final _controller = TextEditingController();
-  final _service = MockAiService();
+  final _scrollController = ScrollController();
+  final _service = FirebaseAiService();
   final List<_ChatMessage> _messages = const [
     _ChatMessage(
       isUser: false,
@@ -26,6 +28,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -37,6 +40,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
       _isThinking = true;
       _controller.clear();
     });
+    _scrollToBottom();
     final response = await _service.ask(prompt);
     if (!mounted) return;
     setState(() {
@@ -50,6 +54,18 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
       );
       _isThinking = false;
     });
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent + 120,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -61,7 +77,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
           children: [
             _AiHeader(scheme: scheme),
             SizedBox(
-              height: 106,
+              height: 120,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -95,7 +111,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
               ),
             ),
             SizedBox(
-              height: 56,
+              height: 54,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -123,6 +139,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                   ),
                 ),
                 child: ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   itemCount: _messages.length + (_isThinking ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -139,35 +156,61 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 4,
-                      onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
-                        hintText: 'Ask VU AI Desk...',
-                        prefixIcon: Icon(Icons.auto_awesome),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scheme.surface.withValues(alpha: 0.82),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.5),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  FilledButton(
-                    onPressed: _send,
-                    style: FilledButton.styleFrom(
-                      shape: const CircleBorder(),
-                      padding: const EdgeInsets.all(18),
-                      backgroundColor: scheme.primary,
-                      shadowColor: scheme.primary.withValues(alpha: 0.4),
-                      elevation: 4,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            minLines: 1,
+                            maxLines: 4,
+                            onSubmitted: (_) => _send(),
+                            decoration: const InputDecoration(
+                              hintText: 'Ask VU AI Desk...',
+                              prefixIcon: Icon(Icons.auto_awesome),
+                              filled: false,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: _send,
+                          style: FilledButton.styleFrom(
+                            shape: const CircleBorder(),
+                            padding: const EdgeInsets.all(18),
+                            backgroundColor: scheme.primary,
+                            shadowColor: scheme.primary.withValues(alpha: 0.4),
+                            elevation: 4,
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: Icon(
+                              _isThinking
+                                  ? Icons.hourglass_top
+                                  : Icons.send_rounded,
+                              key: ValueKey(_isThinking),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      _isThinking ? Icons.hourglass_top : Icons.mic_none,
-                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -188,61 +231,126 @@ class _AiHeader extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(32),
         gradient: LinearGradient(
           colors: [scheme.primary, scheme.secondary, const Color(0xFF7C3AED)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.36),
+          Row(
+            children: [
+              Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.36),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.psychology,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  )
+                  .animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .scale(
+                    begin: const Offset(0.94, 0.94),
+                    end: const Offset(1.04, 1.04),
+                    duration: 1400.ms,
                   ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'VU AI Desk',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Campus helpdesk, smart search, summaries, and study support.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.86),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.psychology,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              )
-              .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .scale(
-                begin: const Offset(0.94, 0.94),
-                end: const Offset(1.04, 1.04),
-                duration: 1400.ms,
               ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'VU AI Desk',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Campus helpdesk, smart search, summaries, and study support.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.86),
-                  ),
-                ),
-              ],
-            ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: const [
+              Expanded(
+                child: _MiniInfo(label: 'Mode', value: 'Campus AI'),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: _MiniInfo(label: 'Sources', value: 'Verified'),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: _MiniInfo(label: 'Tone', value: 'Friendly'),
+              ),
+            ],
           ),
         ],
       ),
     ).animate().fadeIn(duration: 380.ms).slideY(begin: -0.06, end: 0);
+  }
+}
+
+class _MiniInfo extends StatelessWidget {
+  const _MiniInfo({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -259,6 +367,8 @@ class _QuickPrompt extends StatelessWidget {
       child: ActionChip(
         avatar: const Icon(Icons.bolt, size: 18),
         label: Text(label),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+        side: BorderSide.none,
         onPressed: () => onTap(label),
       ),
     );
@@ -283,19 +393,30 @@ class _AiToolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 190,
+      width: 210,
       margin: const EdgeInsets.only(left: 16, right: 2, bottom: 10),
       child: Card(
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
           onTap: onTap,
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: [
+                  color.withValues(alpha: 0.16),
+                  color.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.14),
+                  backgroundColor: color.withValues(alpha: 0.2),
                   child: Icon(icon, color: color),
                 ),
                 const Spacer(),
