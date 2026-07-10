@@ -215,23 +215,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
             ),
 
-            // Top skip button
+            // Top bar with Logo and Skip button
             SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: TextButton(
-                    onPressed: () => context.go('/login'),
-                    style: TextButton.styleFrom(foregroundColor: onBgColor),
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16.0),
+                      child: Image.asset(
+                        'assets/images/vu_hub_logo.png',
+                        height: 40,
+                      ).animate().fadeIn(duration: 500.ms),
                     ),
-                  ),
+                    TextButton(
+                      onPressed: () => context.go('/login'),
+                      style: TextButton.styleFrom(foregroundColor: onBgColor),
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
