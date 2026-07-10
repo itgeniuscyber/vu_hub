@@ -1,8 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-
-import 'auth_shared.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,28 +17,62 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _slides = [
     _OnboardingSlide(
-      icon: Icons.campaign_outlined,
-      badge: 'Official Feed',
-      title: 'Verified notices, urgent alerts, and trusted campus updates.',
+      imageAsset: 'assets/images/p6.jpeg',
+      title: 'Get Better Grades',
       body:
-          'Receive official announcements, guild updates, and urgent alerts from trusted university sources.',
-      highlights: ['Pinned notices', 'Urgent alerts', 'Guild updates'],
+          'Access past papers, verified resources, and study materials curated specifically for your course.',
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
+      badges: [
+        _SlideBadge(
+          icon: Icons.auto_awesome,
+          label: 'Vault',
+          value: '+200%',
+          alignment: Alignment.centerLeft,
+          padding: EdgeInsets.only(left: 30, bottom: 40),
+        ),
+        _SlideBadge(
+          icon: Icons.school,
+          label: 'Study',
+          value: 'Smart',
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 30, top: 80),
+        ),
+      ],
     ),
     _OnboardingSlide(
-      icon: Icons.folder_copy_outlined,
-      badge: 'VU Vault',
-      title: 'Resources that actually help you study and revise faster.',
+      imageAsset: 'assets/images/gal-no-bg.png',
+      title: 'Your Campus is First',
       body:
-          'Find past papers, course resources, event materials, and study content from the existing VU database.',
-      highlights: ['Past papers', 'Shared resources', 'Lecturer uploads'],
+          'Stay updated with official announcements, guild notices, and urgent alerts directly from verified university sources.',
+      fit: BoxFit.contain,
+      alignment: Alignment.bottomCenter,
+      badges: [
+        _SlideBadge(
+          icon: Icons.campaign,
+          label: 'Alerts',
+          value: 'Live',
+          alignment: Alignment.centerLeft,
+          padding: EdgeInsets.only(left: 40, top: 40),
+        ),
+      ],
     ),
     _OnboardingSlide(
-      icon: Icons.auto_awesome,
-      badge: 'AI Desk',
-      title: 'Campus AI support designed for real student questions.',
+      imageAsset: 'assets/images/smart-ai-gal.jpg',
+      title: 'Welcome to VU Hub',
       body:
-          'Ask campus questions, summarize notices, study with Vault resources, and get routed to the right office.',
-      highlights: ['Smart routing', 'Study help', 'Source-aware answers'],
+          'The ultimate campus app. AI assistance, live event tracking, and everything you need in one seamless experience.',
+      fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
+      badges: [
+        _SlideBadge(
+          icon: Icons.hub,
+          label: 'VU Hub',
+          value: 'Pro',
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.only(right: 40, bottom: 60),
+        ),
+      ],
     ),
   ];
 
@@ -51,133 +85,316 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      body: AuthBackdrop(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // We want a clean, premium background (white in light mode, dark in dark mode)
+    final bgColor = isDark ? scheme.surface : Colors.white;
+    final onBgColor = isDark ? Colors.white : Colors.black;
+
+    // Use AnnotatedRegion to ensure status bar text is visible
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: Stack(
+          children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: _slides.length,
+              onPageChanged: (value) => setState(() => _page = value),
+              itemBuilder: (context, index) {
+                final slide = _slides[index];
+                return Column(
                   children: [
-                    Text(
-                      'VU Hub',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => context.go('/login'),
-                      child: const Text('Skip'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final wide = constraints.maxWidth >= 920;
-                      final pager = PageView.builder(
-                        controller: _controller,
-                        itemCount: _slides.length,
-                        onPageChanged: (value) => setState(() => _page = value),
-                        itemBuilder: (context, index) =>
-                            _OnboardingCard(slide: _slides[index]),
-                      );
-                      if (!wide) return pager;
-                      return Row(
+                    // Top Image Area (60% of screen)
+                    Expanded(
+                      flex: 60,
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          const Expanded(
-                            child: AuthShowcasePanel(
-                              eyebrow: 'Modern Student Experience',
-                              title:
-                                  'A smoother, smarter, more premium campus companion.',
-                              subtitle:
-                                  'VU Hub brings together verified information, academic resources, live activity, and AI assistance in one student-first mobile experience.',
-                              tags: [
-                                'Student-first',
-                                'Premium UI',
-                                'Live campus',
-                                'Trusted data',
-                              ],
-                              highlights: [
-                                AuthHighlight(
-                                  icon: Icons.dashboard_customize_outlined,
-                                  title: 'Everything in one place',
-                                  subtitle:
-                                      'Move from dashboard to vault, live events, guild updates, and AI support without the app feeling fragmented.',
+                          // Background color for images with no background
+                          if (slide.imageAsset.contains('no-bg'))
+                            Container(
+                              color: scheme.surfaceContainerHighest.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
+
+                          // Image
+                          Image.asset(
+                            slide.imageAsset,
+                            fit: slide.fit,
+                            alignment: slide.alignment,
+                          ).animate().fadeIn(duration: 500.ms),
+
+                          // Gradient fade at the bottom to blend into the text area
+                          Positioned(
+                            bottom:
+                                -1, // slight overlap to prevent bleeding lines
+                            left: 0,
+                            right: 0,
+                            height: 120,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    bgColor.withValues(alpha: 0),
+                                    bgColor,
+                                  ],
                                 ),
-                                AuthHighlight(
-                                  icon: Icons.shield_outlined,
-                                  title: 'Trust built into the flow',
-                                  subtitle:
-                                      'Official updates, safe roles, and secure Firebase Authentication keep the student experience polished and reliable.',
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 24),
-                          SizedBox(width: 430, child: pager),
+
+                          // Floating Badges
+                          ...slide.badges.map((badge) {
+                            return Align(
+                              alignment: badge.alignment,
+                              child: Padding(
+                                padding: badge.padding,
+                                child:
+                                    _FloatingBadge(
+                                      icon: badge.icon,
+                                      label: badge.label,
+                                      value: badge.value,
+                                    ).animate().scale(
+                                      delay: 300.ms,
+                                      curve: Curves.easeOutBack,
+                                    ),
+                              ),
+                            );
+                          }),
                         ],
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    ...List.generate(
-                      _slides.length,
-                      (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: _page == index ? 30 : 10,
-                        height: 10,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(999),
-                          color: _page == index
-                              ? scheme.primary
-                              : Colors.white.withValues(alpha: 0.28),
-                        ),
                       ),
                     ),
-                    const Spacer(),
-                    OutlinedButton(
-                      onPressed: () => context.go('/register'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.28),
+
+                    // Bottom Text Area (40% of screen)
+                    Expanded(
+                      flex: 40,
+                      child: Container(
+                        width: double.infinity,
+                        color: bgColor,
+                        padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              slide.title,
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: onBgColor,
+                                    height: 1.2,
+                                  ),
+                            ).animate().slideX(begin: 0.05, end: 0).fadeIn(),
+                            const SizedBox(height: 16),
+                            Text(
+                                  slide.body,
+                                  style: Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(
+                                        color: isDark
+                                            ? Colors.white70
+                                            : Colors.black54,
+                                        height: 1.5,
+                                      ),
+                                )
+                                .animate()
+                                .slideX(begin: 0.05, end: 0, delay: 100.ms)
+                                .fadeIn(delay: 100.ms),
+                          ],
                         ),
-                      ),
-                      child: const Text('Create account'),
-                    ),
-                    const SizedBox(width: 10),
-                    FilledButton.icon(
-                      onPressed: () {
-                        if (_page == _slides.length - 1) {
-                          context.go('/login');
-                        } else {
-                          _controller.nextPage(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeOutCubic,
-                          );
-                        }
-                      },
-                      icon: Icon(
-                        _page == _slides.length - 1
-                            ? Icons.login
-                            : Icons.arrow_forward,
-                      ),
-                      label: Text(
-                        _page == _slides.length - 1 ? 'Get started' : 'Next',
                       ),
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
+
+            // Top skip button
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: TextButton(
+                    onPressed: () => context.go('/login'),
+                    style: TextButton.styleFrom(foregroundColor: onBgColor),
+                    child: const Text(
+                      'Skip',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom Navigation Area
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Custom Page Indicator
+                      Row(
+                        children: List.generate(_slides.length, (index) {
+                          final active = _page == index;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            margin: const EdgeInsets.only(right: 6),
+                            height: 6,
+                            width: active ? 28 : 6,
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? onBgColor
+                                  : onBgColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+                      const Spacer(),
+
+                      // Next / Get Started Button
+                      GestureDetector(
+                        onTap: () {
+                          if (_page == _slides.length - 1) {
+                            context.go('/login');
+                          } else {
+                            _controller.nextPage(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOutCubic,
+                            );
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                          height: 64,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: _page == _slides.length - 1 ? 24 : 0,
+                          ),
+                          width: _page == _slides.length - 1 ? 160 : 64,
+                          decoration: BoxDecoration(
+                            color: onBgColor,
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: onBgColor.withValues(alpha: 0.2),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: _page == _slides.length - 1
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Get Started',
+                                        style: TextStyle(
+                                          color: bgColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.arrow_forward,
+                                        color: bgColor,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  )
+                                : Icon(
+                                    Icons.arrow_forward,
+                                    color: bgColor,
+                                    size: 28,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingBadge extends StatelessWidget {
+  const _FloatingBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 14),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                value,
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -185,125 +402,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingCard extends StatelessWidget {
-  const _OnboardingCard({required this.slide});
+class _SlideBadge {
+  const _SlideBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.alignment,
+    required this.padding,
+  });
 
-  final _OnboardingSlide slide;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: AuthGlassPane(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  colors: [scheme.primary, scheme.secondary, scheme.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      slide.badge,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelLarge?.copyWith(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.16),
-                    ),
-                    child: Icon(slide.icon, color: Colors.white, size: 32),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    slide.title,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(slide.body, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: slide.highlights
-                  .map((item) => _MiniTag(label: item))
-                  .toList(),
-            ),
-            const SizedBox(height: 18),
-            const AuthInfoBanner(
-              icon: Icons.phone_android_outlined,
-              title: 'Built for mobile flow',
-              message:
-                  'Large cards, smooth transitions, elegant dark mode, and clearer campus actions make the experience feel newer and more premium.',
-            ),
-          ],
-        ),
-      ).animate().fadeIn(duration: 320.ms).slideY(begin: 0.06, end: 0),
-    );
-  }
-}
-
-class _MiniTag extends StatelessWidget {
-  const _MiniTag({required this.label});
-
+  final IconData icon;
   final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: scheme.primary.withValues(alpha: 0.08),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelLarge),
-    );
-  }
+  final String value;
+  final Alignment alignment;
+  final EdgeInsets padding;
 }
 
 class _OnboardingSlide {
   const _OnboardingSlide({
-    required this.icon,
-    required this.badge,
+    required this.imageAsset,
     required this.title,
     required this.body,
-    required this.highlights,
+    required this.fit,
+    required this.alignment,
+    this.badges = const [],
   });
 
-  final IconData icon;
-  final String badge;
+  final String imageAsset;
   final String title;
   final String body;
-  final List<String> highlights;
+  final BoxFit fit;
+  final Alignment alignment;
+  final List<_SlideBadge> badges;
 }

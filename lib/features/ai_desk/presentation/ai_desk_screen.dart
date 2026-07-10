@@ -75,139 +75,172 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _AiHeader(scheme: scheme),
-            SizedBox(
-              height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _AiToolCard(
-                    title: 'Smart search',
-                    subtitle: 'Find notices, events, and resources',
-                    icon: Icons.travel_explore,
-                    color: scheme.primary,
-                    onTap: () => _send(
-                      'Search campus help for exam timetable and latest notices',
-                    ),
-                  ),
-                  _AiToolCard(
-                    title: 'Study assist',
-                    subtitle: 'Summaries, flashcards, revision help',
-                    icon: Icons.menu_book_outlined,
-                    color: scheme.secondary,
-                    onTap: () =>
-                        _send('Create revision questions from a past paper'),
-                  ),
-                  _AiToolCard(
-                    title: 'Route me',
-                    subtitle: 'Find the right office or process',
-                    icon: Icons.hub_outlined,
-                    color: const Color(0xFF8B5CF6),
-                    onTap: () =>
-                        _send('Where should I go for retake applications?'),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 54,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _QuickPrompt(
-                    label: 'How do I apply for a retake?',
-                    onTap: _send,
-                  ),
-                  _QuickPrompt(label: 'Find past papers for DSA', onTap: _send),
-                  _QuickPrompt(label: 'Summarize latest notice', onTap: _send),
-                  _QuickPrompt(label: 'Where do I get support?', onTap: _send),
-                ],
-              ),
-            ),
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                  color: scheme.surfaceContainerLow,
-                  border: Border.all(
-                    color: scheme.outlineVariant.withValues(alpha: 0.8),
-                  ),
-                ),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  itemCount: _messages.length + (_isThinking ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (_isThinking && index == _messages.length) {
-                      return const _TypingBubble();
-                    }
-                    return _MessageBubble(message: _messages[index])
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.only(bottom: 24),
+                itemCount: _messages.length + (_isThinking ? 1 : 0) + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AiHeader(scheme: scheme),
+                        SizedBox(
+                          height: 160,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: [
+                              _AiToolCard(
+                                title: 'Smart search',
+                                subtitle: 'Find notices, events, and resources',
+                                icon: Icons.travel_explore,
+                                color: scheme.primary,
+                                onTap: () => _send(
+                                  'Search campus help for exam timetable and latest notices',
+                                ),
+                              ),
+                              _AiToolCard(
+                                title: 'Study assist',
+                                subtitle:
+                                    'Summaries, flashcards, revision help',
+                                icon: Icons.menu_book_outlined,
+                                color: scheme.secondary,
+                                onTap: () => _send(
+                                  'Create revision questions from a past paper',
+                                ),
+                              ),
+                              _AiToolCard(
+                                title: 'Route me',
+                                subtitle: 'Find the right office or process',
+                                icon: Icons.hub_outlined,
+                                color: const Color(0xFF8B5CF6),
+                                onTap: () => _send(
+                                  'Where should I go for retake applications?',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 48,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: [
+                              _QuickPrompt(
+                                label: 'How do I apply for a retake?',
+                                onTap: _send,
+                              ),
+                              _QuickPrompt(
+                                label: 'Find past papers for DSA',
+                                onTap: _send,
+                              ),
+                              _QuickPrompt(
+                                label: 'Summarize latest notice',
+                                onTap: _send,
+                              ),
+                              _QuickPrompt(
+                                label: 'Where do I get support?',
+                                onTap: _send,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  }
+
+                  final msgIndex = index - 1;
+                  if (_isThinking && msgIndex == _messages.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: _TypingBubble(),
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _MessageBubble(message: _messages[msgIndex])
                         .animate()
                         .fadeIn(duration: 220.ms)
-                        .slideY(begin: 0.04, end: 0);
-                  },
-                ),
+                        .slideY(begin: 0.04, end: 0),
+                  );
+                },
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: scheme.surface.withValues(alpha: 0.82),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: scheme.outlineVariant.withValues(alpha: 0.5),
-                      ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            minLines: 1,
-                            maxLines: 4,
-                            onSubmitted: (_) => _send(),
-                            decoration: const InputDecoration(
-                              hintText: 'Ask VU AI Desk...',
-                              prefixIcon: Icon(Icons.auto_awesome),
-                              filled: false,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              border: InputBorder.none,
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              minLines: 1,
+                              maxLines: 5,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _send(),
+                              decoration: InputDecoration(
+                                hintText: 'Ask VU AI Desk...',
+                                hintStyle: TextStyle(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: _send,
-                          style: FilledButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: const EdgeInsets.all(18),
-                            backgroundColor: scheme.primary,
-                            shadowColor: scheme.primary.withValues(alpha: 0.4),
-                            elevation: 4,
-                          ),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 220),
-                            child: Icon(
-                              _isThinking
-                                  ? Icons.hourglass_top
-                                  : Icons.send_rounded,
-                              key: ValueKey(_isThinking),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: _send,
+                            style: FilledButton.styleFrom(
+                              shape: const CircleBorder(),
+                              padding: const EdgeInsets.all(12),
+                              backgroundColor: scheme.primary,
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child: Icon(
+                                _isThinking
+                                    ? Icons.more_horiz
+                                    : Icons.arrow_upward_rounded,
+                                key: ValueKey(_isThinking),
+                                color: scheme.onPrimary,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -228,20 +261,20 @@ class _AiHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
         gradient: LinearGradient(
-          colors: [scheme.primary, scheme.secondary, const Color(0xFF7C3AED)],
+          colors: [scheme.primary, scheme.tertiary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.2),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: scheme.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -273,22 +306,24 @@ class _AiHeader extends StatelessWidget {
                     end: const Offset(1.04, 1.04),
                     duration: 1400.ms,
                   ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'VU AI Desk',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       'Campus helpdesk, smart search, summaries, and study support.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withValues(alpha: 0.86),
+                        height: 1.3,
                       ),
                     ),
                   ],
@@ -296,7 +331,7 @@ class _AiHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           Row(
             children: const [
               Expanded(
@@ -363,12 +398,24 @@ class _QuickPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 10),
       child: ActionChip(
-        avatar: const Icon(Icons.bolt, size: 18),
-        label: Text(label),
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-        side: BorderSide.none,
+        avatar: Icon(
+          Icons.auto_awesome,
+          size: 16,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         onPressed: () => onTap(label),
       ),
     );
@@ -396,6 +443,7 @@ class _AiToolCard extends StatelessWidget {
       width: 210,
       margin: const EdgeInsets.only(left: 16, right: 2, bottom: 10),
       child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
           onTap: onTap,
@@ -411,18 +459,29 @@ class _AiToolCard extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 CircleAvatar(
                   backgroundColor: color.withValues(alpha: 0.2),
                   child: Icon(icon, color: color),
                 ),
-                const Spacer(),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -441,53 +500,107 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final align = message.isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final color = message.isUser ? scheme.primary : scheme.surface;
-    final textColor = message.isUser ? Colors.white : scheme.onSurface;
+    final color = message.isUser ? scheme.primary : scheme.surfaceContainerHigh;
+    final textColor = message.isUser ? scheme.onPrimary : scheme.onSurface;
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(24),
+      topRight: const Radius.circular(24),
+      bottomLeft: Radius.circular(message.isUser ? 24 : 8),
+      bottomRight: Radius.circular(message.isUser ? 8 : 24),
+    );
+
     return Align(
       alignment: align,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 340),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(24),
-          border: message.isUser
-              ? null
-              : Border.all(color: scheme.outlineVariant),
+          borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               message.text,
-              style: TextStyle(color: textColor, height: 1.35),
+              style: TextStyle(color: textColor, height: 1.5, fontSize: 15),
             ),
             if (message.sources.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: 8,
+                runSpacing: 8,
                 children: message.sources
                     .map(
-                      (source) => Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(source),
-                        avatar: const Icon(Icons.verified, size: 16),
+                      (source) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.surface.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: scheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              size: 14,
+                              color: scheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              source,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                     .toList(),
               ),
             ],
             if (message.actions.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: message.actions
                     .map(
-                      (action) =>
-                          OutlinedButton(onPressed: () {}, child: Text(action)),
+                      (action) => FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 36),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {},
+                        child: Text(
+                          action,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
                     )
                     .toList(),
               ),

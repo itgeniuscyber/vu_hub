@@ -30,106 +30,129 @@ class GuildHubScreen extends StatelessWidget {
               icon: Icons.groups_outlined,
               scheme: scheme,
               badge: 'Verified voice',
-              height: 190,
+              height: 220,
             ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
             const SizedBox(height: 20),
             SizedBox(
-              height: 112,
+              height: 144,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                children: const [
+                children: [
                   _GuildMetricCard(
                     icon: Icons.verified_outlined,
                     title: 'Trusted notices',
                     subtitle: 'Curated from verified resource flows',
                     width: 210,
+                    gradientColors: [scheme.primary, scheme.secondary],
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   _GuildMetricCard(
                     icon: Icons.campaign_outlined,
                     title: 'Student feedback',
                     subtitle: 'Grouped into moderation-ready themes',
                     width: 224,
+                    gradientColors: [scheme.secondary, scheme.tertiary],
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   _GuildMetricCard(
                     icon: Icons.account_tree_outlined,
                     title: 'Cabinet structure',
                     subtitle: 'View leadership in a dedicated screen',
                     width: 224,
+                    gradientColors: [scheme.tertiary, scheme.primary],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            _GuildHero(scheme: scheme),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const SectionHeader(title: 'Guild cabinet'),
             const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            color: scheme.primary.withValues(alpha: 0.12),
-                          ),
-                          child: Icon(
-                            Icons.account_tree_outlined,
-                            color: scheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Guild Cabinet Structure',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Open a separate screen for the executive hierarchy, cabinet offices, and student-facing portfolios.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: const [
-                        _GuildPreviewPill(label: 'Executive office'),
-                        _GuildPreviewPill(label: 'Academic affairs'),
-                        _GuildPreviewPill(label: 'Student welfare'),
-                        _GuildPreviewPill(label: 'Media and publicity'),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        buildAppPageRoute(const GuildCabinetScreen()),
-                      ),
-                      icon: const Icon(Icons.arrow_outward_rounded),
-                      label: const Text('View guild cabinet'),
-                    ),
-                  ],
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: scheme.surfaceContainerHigh.withValues(alpha: 0.6),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: scheme.primary.withValues(alpha: 0.12),
+                          border: Border.all(
+                            color: scheme.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.account_tree_outlined,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Guild Cabinet Structure',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Explore the executive hierarchy, cabinet offices, and student-facing portfolios.',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    height: 1.3,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: const [
+                      _GuildPreviewPill(label: 'Executive office'),
+                      _GuildPreviewPill(label: 'Academic affairs'),
+                      _GuildPreviewPill(label: 'Student welfare'),
+                      _GuildPreviewPill(label: 'Media & publicity'),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).push(buildAppPageRoute(const GuildCabinetScreen())),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                      label: const Text('View full cabinet'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 24),
             const SectionHeader(title: 'Verified updates'),
             const SizedBox(height: 12),
             StreamBuilder<List<VuResource>>(
@@ -273,29 +296,56 @@ class _GuildMetricCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.width,
+    required this.gradientColors,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final double width;
+  final List<Color> gradientColors;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       child: Card(
-        child: Padding(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              colors: [
+                gradientColors[0].withValues(alpha: 0.12),
+                gradientColors[1].withValues(alpha: 0.04),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: scheme.primary),
+              CircleAvatar(
+                backgroundColor: gradientColors[0].withValues(alpha: 0.2),
+                radius: 18,
+                child: Icon(icon, color: gradientColors[0], size: 20),
+              ),
               const Spacer(),
-              Text(title, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -342,9 +392,9 @@ class _GuildPreviewPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: scheme.primary,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: scheme.primary),
       ),
     );
   }
@@ -396,65 +446,6 @@ class _GuildInsightCard extends StatelessWidget {
             Icon(Icons.insights_outlined, color: scheme.primary),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _GuildHero extends StatelessWidget {
-  const _GuildHero({required this.scheme});
-
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [
-            scheme.primary.withValues(alpha: 0.94),
-            scheme.secondary.withValues(alpha: 0.82),
-            scheme.tertiary.withValues(alpha: 0.7),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.14),
-            ),
-            child: const Icon(Icons.verified, color: Colors.white),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Student guild, clearly verified',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Track trusted guild updates, structured feedback, and emerging student themes.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.88),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

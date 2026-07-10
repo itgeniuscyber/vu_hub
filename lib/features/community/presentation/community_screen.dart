@@ -29,14 +29,17 @@ class CommunityScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     FeatureHeroBanner(
-                      title: 'Community',
-                      subtitle:
-                          'Join student conversations, follow public posts, and surface helpful campus discussion threads from the live Firebase collections.',
-                      icon: Icons.forum_outlined,
-                      scheme: scheme,
-                      badge: 'Campus voices',
-                      height: 188,
-                    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+                          title: 'Community',
+                          subtitle:
+                              'Join student conversations, follow public posts, and surface helpful campus discussion threads from the live Firebase collections.',
+                          icon: Icons.forum_outlined,
+                          scheme: scheme,
+                          badge: 'Campus voices',
+                          height: 188,
+                        )
+                        .animate()
+                        .fadeIn(duration: 300.ms)
+                        .slideY(begin: 0.05, end: 0),
                     const SizedBox(height: 18),
                     SizedBox(
                       height: 104,
@@ -202,9 +205,10 @@ class _DiscussionTab extends StatelessWidget {
             ...items.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _DiscussionCard(
-                  thread: item,
-                ).animate().fadeIn(duration: 240.ms).slideX(begin: 0.03, end: 0),
+                child: _DiscussionCard(thread: item)
+                    .animate()
+                    .fadeIn(duration: 240.ms)
+                    .slideX(begin: 0.03, end: 0),
               ),
             ),
           ],
