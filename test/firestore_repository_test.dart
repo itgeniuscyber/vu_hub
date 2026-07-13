@@ -3,6 +3,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vu_hub/features/auth/data/user_profile.dart';
 import 'package:vu_hub/features/community/data/community_repository.dart';
+import 'package:vu_hub/features/directory/data/directory_repository.dart';
 import 'package:vu_hub/features/directory/data/vu_resource_repository.dart';
 import 'package:vu_hub/features/feed/data/announcement_repository.dart';
 import 'package:vu_hub/features/live/data/events_repository.dart';
@@ -67,6 +68,10 @@ void main() {
         await firestore.collection('public_chat').doc('msg_1').set({
           'message': 'Hello campus',
           'username': 'Student A',
+          'faculty': 'Science And Technology',
+          'senderPic': 'https://example.com/avatar.png',
+          'replyToSender': 'Student B',
+          'replyToMessage': 'Where are the notes?',
           'timestamp': Timestamp.fromDate(DateTime(2026, 2, 3)),
         });
         await firestore.collection('discussions').doc('thread_1').set({
@@ -88,6 +93,10 @@ void main() {
         final posts = await repository.watchPosts().first;
 
         expect(messages.single.text, 'Hello campus');
+        expect(messages.single.senderFaculty, 'Science And Technology');
+        expect(messages.single.senderPhotoUrl, contains('avatar.png'));
+        expect(messages.single.replyToName, 'Student B');
+        expect(messages.single.replyToText, 'Where are the notes?');
         expect(discussions.single.title, 'Exam prep');
         expect(discussions.single.commentCount, 4);
         expect(posts.single.caption, 'Guild meeting tonight');
@@ -143,6 +152,32 @@ void main() {
         expect(items.single.audience, 'All students');
       },
     );
+
+    test('DirectoryRepository reads rich department routing fields', () async {
+      final firestore = FakeFirebaseFirestore();
+      await firestore.collection('departments').doc('ict').set({
+        'name': 'ICT Help Desk',
+        'office': 'ICT Services',
+        'position': 'Digital Support',
+        'email': 'ict@vu.ac.zw',
+        'phoneNumber': '+256 700 000 000',
+        'officeLocation': 'Innovation Hub',
+        'category': 'Digital',
+        'description': 'Helps students with VClass and Wi-Fi.',
+        'officeHours': 'Mon-Fri, 8:00 AM - 5:00 PM',
+        'services': ['VClass help', 'Wi-Fi support'],
+        'keywords': ['vclass', 'wifi'],
+      });
+
+      final items = await DirectoryRepository(
+        firestore: firestore,
+      ).watchEntries().first;
+
+      expect(items.single.name, 'ICT Help Desk');
+      expect(items.single.routeLabel, 'Digital');
+      expect(items.single.services, contains('VClass help'));
+      expect(items.single.officeHours, contains('Mon-Fri'));
+    });
 
     test('UserProfile parses roles without reading password fields', () {
       final profile = UserProfile.fromFirestore('uid_1', {

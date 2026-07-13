@@ -230,7 +230,9 @@ class _FloatingBottomBar extends StatelessWidget {
                                   fontSize: 12,
                                   color: selected
                                       ? scheme.primary
-                                      : scheme.onSurface.withValues(alpha: 0.68),
+                                      : scheme.onSurface.withValues(
+                                          alpha: 0.68,
+                                        ),
                                 ),
                           ),
                         ],

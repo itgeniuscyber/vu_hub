@@ -10,6 +10,11 @@ class CommunityMessage {
     required this.senderId,
     required this.createdAt,
     required this.isPinned,
+    this.senderFaculty,
+    this.senderPhotoUrl,
+    this.replyToName,
+    this.replyToText,
+    this.mediaUrl,
   });
 
   final String id;
@@ -18,6 +23,11 @@ class CommunityMessage {
   final String senderId;
   final DateTime? createdAt;
   final bool isPinned;
+  final String? senderFaculty;
+  final String? senderPhotoUrl;
+  final String? replyToName;
+  final String? replyToText;
+  final String? mediaUrl;
 
   factory CommunityMessage.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
@@ -39,6 +49,38 @@ class CommunityMessage {
       senderId: firstString(data, ['senderId', 'userId', 'uid', 'authorId']),
       createdAt: firstDate(data, ['createdAt', 'timestamp', 'sentAt', 'time']),
       isPinned: firstBool(data, ['isPinned', 'pinned']),
+      senderFaculty: firstString(data, [
+        'senderFaculty',
+        'faculty',
+        'department',
+      ]),
+      senderPhotoUrl: firstString(data, [
+        'senderPic',
+        'senderPhotoUrl',
+        'profileImage',
+        'profileImageUrl',
+        'avatarUrl',
+        'photoURL',
+        'photoUrl',
+      ]),
+      replyToName: firstString(data, [
+        'replyToName',
+        'replyToSender',
+        'repliedToName',
+        'replyName',
+      ]),
+      replyToText: firstString(data, [
+        'replyToText',
+        'replyToMessage',
+        'repliedToText',
+        'replyText',
+      ]),
+      mediaUrl: firstString(data, [
+        'mediaUrl',
+        'imageUrl',
+        'attachmentUrl',
+        'chatImageUrl',
+      ]),
     );
   }
 }

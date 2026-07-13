@@ -3,12 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
-import '../../../core/widgets/metric_card.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/utils/app_page_route.dart';
 import '../../auth/data/app_session.dart';
+import '../../community/presentation/community_screen.dart';
 import '../../feed/data/announcement.dart';
 import '../../feed/data/announcement_repository.dart';
 import '../../live/data/campus_event.dart';
@@ -21,9 +21,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final navigation = AppNavigationScope.of(context);
     final session = context.watch<AppSession>();
-    final cards = [
+    final bgColor = isDark ? scheme.surface : Colors.white;
+
+    final quickActions = [
       _QuickAction(
         icon: Icons.auto_awesome,
         title: 'Ask VU AI',
@@ -48,129 +51,325 @@ class HomeScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async =>
-              Future<void>.delayed(const Duration(milliseconds: 500)),
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-                sliver: SliverList.list(
-                  children: [
-                    _HeroHeader(scheme: scheme, session: session),
-                    const SizedBox(height: 22),
-                    _StoryStrip(scheme: scheme),
-                    const SizedBox(height: 18),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth >= 720
-                            ? 3
-                            : 2;
-                        return GridView.count(
-                          crossAxisCount: crossAxisCount,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: constraints.maxWidth >= 720
-                              ? 1.15
-                              : 1.05,
-                          children: [
-                            _MetricAction(
-                              onTap: () => navigation.onSelectTab(1),
-                              child: MetricCard(
-                                icon: Icons.campaign,
-                                label: 'Latest notices',
-                                value: 'Feed',
+      backgroundColor: bgColor,
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            Future<void>.delayed(const Duration(milliseconds: 500)),
+        child: CustomScrollView(
+          slivers: [
+            // Premium Header with Background Image
+            SliverToBoxAdapter(child: _PremiumHomeHeader(session: session)),
+
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+              sliver: SliverList.list(
+                children: [
+                  const SizedBox(height: 24),
+                  _StoryStrip(scheme: scheme),
+                  const SizedBox(height: 24),
+
+                  // Metric / Navigation Cards
+                  LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount = constraints.maxWidth >= 720
+                              ? 3
+                              : 2;
+                          return GridView.count(
+                            crossAxisCount: crossAxisCount,
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: constraints.maxWidth >= 720
+                                ? 1.3
+                                : 1.1,
+                            children: [
+                              _PremiumMetricCard(
+                                icon: Icons.campaign_outlined,
+                                title: 'Feed',
+                                subtitle: 'Latest notices',
                                 color: scheme.primary,
+                                onTap: () => navigation.onSelectTab(1),
                               ),
-                            ),
-                            _MetricAction(
-                              onTap: () => navigation.onSelectTab(4),
-                              child: const MetricCard(
-                                icon: Icons.event_available,
-                                label: 'Campus events',
-                                value: 'Live',
-                                color: Color(0xFFFBBF24),
+                              _PremiumMetricCard(
+                                icon: Icons.event_available_outlined,
+                                title: 'Live',
+                                subtitle: 'Campus events',
+                                color: const Color(0xFFFBBF24),
+                                onTap: () => navigation.onSelectTab(4),
                               ),
-                            ),
-                            _MetricAction(
-                              onTap: () => navigation.onSelectTab(4),
-                              child: MetricCard(
-                                icon: Icons.chat_bubble,
-                                label: 'Community',
-                                value: 'Chat',
+                              _PremiumMetricCard(
+                                icon: Icons.chat_bubble_outline,
+                                title: 'Chat',
+                                subtitle: 'Community room',
                                 color: scheme.secondary,
+                                onTap: () => Navigator.of(context).push(
+                                  buildAppPageRoute(const CommunityScreen()),
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    const SectionHeader(title: 'Quick actions'),
-                    const SizedBox(height: 12),
-                    ...cards
-                        .map(
-                          (card) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: card,
-                          ),
-                        )
-                        .toList()
-                        .animate(interval: 90.ms)
-                        .fadeIn(duration: 350.ms)
-                        .slideX(begin: 0.08, end: 0),
-                    const SizedBox(height: 12),
-                    const SectionHeader(title: 'Today at VU'),
-                    const SizedBox(height: 12),
-                    _DashboardEventCard(scheme: scheme),
-                    const SizedBox(height: 12),
-                    _DashboardAnnouncementCard(scheme: scheme),
-                    const SizedBox(height: 12),
-                    _CampusPulseCard(scheme: scheme),
-                  ],
-                ),
+                              _PremiumMetricCard(
+                                icon: Icons.question_answer_outlined,
+                                title: 'Discussions',
+                                subtitle: 'Academic threads',
+                                color: const Color(0xFF8B5CF6),
+                                onTap: () => Navigator.of(context).push(
+                                  buildAppPageRoute(
+                                    const CommunityDiscussionsScreen(),
+                                  ),
+                                ),
+                              ),
+                              _PremiumMetricCard(
+                                icon: Icons.dynamic_feed_outlined,
+                                title: 'Posts',
+                                subtitle: 'Campus moments',
+                                color: const Color(0xFFF97316),
+                                onTap: () => Navigator.of(context).push(
+                                  buildAppPageRoute(
+                                    const CommunityPostsScreen(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      )
+                      .animate()
+                      .fadeIn(duration: 400.ms)
+                      .slideY(begin: 0.05, end: 0),
+
+                  const SizedBox(height: 32),
+                  const SectionHeader(title: 'Quick Actions'),
+                  const SizedBox(height: 16),
+                  ...quickActions
+                      .map(
+                        (card) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: card,
+                        ),
+                      )
+                      .toList()
+                      .animate(interval: 60.ms)
+                      .fadeIn(duration: 300.ms)
+                      .slideX(begin: 0.05, end: 0),
+
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Today at VU'),
+                  const SizedBox(height: 16),
+                  _DashboardEventCard(scheme: scheme),
+                  const SizedBox(height: 16),
+                  _DashboardAnnouncementCard(scheme: scheme),
+                  const SizedBox(height: 16),
+                  _CampusPulseCard(scheme: scheme),
+                  const SizedBox(height: 80), // Bottom padding for shell nav
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.scheme, required this.session});
-
-  final ColorScheme scheme;
+class _PremiumHomeHeader extends StatelessWidget {
+  const _PremiumHomeHeader({required this.session});
   final AppSession session;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? scheme.surface : Colors.white;
+
     final name = session.profile?.displayName.trim().isNotEmpty == true
         ? session.profile!.displayName.trim().split(' ').first
         : 'Student';
-    return FeatureHeroBanner(
-      title: 'Good evening, $name',
-      subtitle:
-          'Your campus command center for announcements, resources, events, and AI-powered support.',
-      icon: Icons.school,
-      scheme: scheme,
-      badge: 'Victoria University',
-      height: 232,
-      trailing: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.16),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-        ),
-        child: const Icon(Icons.notifications_none, color: Colors.white),
+
+    return SizedBox(
+      height: 260,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Image
+          Image.asset(
+            'assets/images/p6.jpeg',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.6),
+                  bgColor,
+                ],
+                stops: const [0.0, 0.6, 1.0],
+              ),
+            ),
+          ),
+          // Content
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Profile Badge
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            width: 2,
+                          ),
+                        ),
+                        child: const CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.white24,
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
+                      ),
+                      // Notification Bell
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_none,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Greeting
+                  Text(
+                        'Good evening,\n$name',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1,
+                            ),
+                      )
+                      .animate()
+                      .fadeIn(duration: 400.ms)
+                      .slideY(begin: 0.2, end: 0),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your campus command center',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2, end: 0),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.08, end: 0);
+    );
+  }
+}
+
+class _PremiumMetricCard extends StatelessWidget {
+  const _PremiumMetricCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? scheme.surfaceContainerHigh : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark
+                ? Colors.white12
+                : Colors.black.withValues(alpha: 0.05),
+          ),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -317,22 +516,6 @@ class _QuickAction extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MetricAction extends StatelessWidget {
-  const _MetricAction({required this.onTap, required this.child});
-
-  final VoidCallback onTap;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
-      onTap: onTap,
-      child: child,
     );
   }
 }
