@@ -1,15 +1,19 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/firestore_error_message.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../ai_desk/presentation/ai_insight_sheet.dart';
 import '../../auth/data/app_session.dart';
+import '../../auth/data/user_profile.dart';
 import '../data/announcement.dart';
 import '../data/announcement_repository.dart';
 
@@ -21,6 +25,9 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  final _repository = AnnouncementRepository();
+  final Map<String, int> _localLikes = {};
+  final Set<String> _savedPosts = {};
   String _selectedCategory = 'All';
   String _query = '';
 
@@ -38,149 +45,145 @@ class _FeedScreenState extends State<FeedScreen> {
     final session = context.watch<AppSession>();
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: scheme.surface,
       body: SafeArea(
+        bottom: false,
         child: StreamBuilder<List<Announcement>>(
-          stream: AnnouncementRepository().watchLatest(),
+          stream: _repository.watchLatest(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                children: const [
-                  LoadingShimmer(height: 196),
-                  SizedBox(height: 16),
-                  LoadingShimmer(height: 70),
-                  SizedBox(height: 12),
-                  LoadingShimmer(height: 54),
-                  SizedBox(height: 12),
-                  LoadingShimmer(height: 156),
-                  SizedBox(height: 12),
-                  LoadingShimmer(height: 156),
-                ],
-              );
+              return const _PulseLoading();
             }
             if (snapshot.hasError) {
               return FirestoreErrorState(
                 error: snapshot.error!,
-                title: 'Could not load announcements',
-                fallbackMessage:
-                    'The announcements feed is unavailable right now.',
+                title: 'Could not load VU Feed',
+                fallbackMessage: 'The campus feed is unavailable right now.',
               );
             }
 
             final allItems = snapshot.data ?? [];
-            final items = allItems
-                .where(
-                  (item) =>
-                      _selectedCategory == 'All' ||
-                      item.category == _selectedCategory,
-                )
-                .where((item) {
-                  if (_query.isEmpty) return true;
-                  final needle = _query.toLowerCase();
-                  return item.title.toLowerCase().contains(needle) ||
-                      item.content.toLowerCase().contains(needle) ||
-                      item.category.toLowerCase().contains(needle) ||
-                      item.publishedBy.toLowerCase().contains(needle);
-                })
-                .toList();
+            final items = _filterItems(allItems);
             final pinned = allItems
                 .where((item) => item.isPinned)
-                .take(5)
+                .take(6)
                 .toList();
-            final urgentCount = allItems
-                .where((item) => item.category.toLowerCase() == 'urgent')
-                .length;
+            final featured = pinned.isNotEmpty
+                ? pinned.first
+                : allItems.isNotEmpty
+                ? allItems.first
+                : null;
 
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _FeedHero(
-                      canPublish: session.canPublishAnnouncements,
-                      onPublish: () => _openPublisher(context, session),
-                      scheme: scheme,
-                      totalCount: allItems.length,
-                    ),
+            return RefreshIndicator(
+              onRefresh: () async => Future<void>.delayed(450.ms),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: true,
+                    elevation: 0,
+                    backgroundColor: scheme.surface.withValues(alpha: 0.96),
+                    surfaceTintColor: Colors.transparent,
+                    titleSpacing: 20,
+                    title: const _PulseWordmark(),
+                    actions: [
+                      IconButton(
+                        tooltip: 'Search',
+                        onPressed: () => _openSearchSheet(context),
+                        icon: const Icon(Icons.search_rounded),
+                      ),
+                      if (session.canPublishAnnouncements)
+                        IconButton.filledTonal(
+                          tooltip: 'Create post',
+                          onPressed: () => _openPublisher(context, session),
+                          icon: const Icon(Icons.add_rounded),
+                        ),
+                      const SizedBox(width: 12),
+                    ],
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  sliver: SliverToBoxAdapter(
-                    child:
-                        _FeedInsightStrip(
-                              totalCount: allItems.length,
-                              pinnedCount: pinned.length,
-                              urgentCount: urgentCount,
-                            )
-                            .animate()
-                            .fadeIn(duration: 280.ms)
-                            .slideY(begin: 0.04, end: 0),
-                  ),
-                ),
-                if (pinned.isNotEmpty)
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     sliver: SliverToBoxAdapter(
-                      child: _PinnedNoticeRail(items: pinned),
-                    ),
-                  ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _FeedToolbarDelegate(
-                    child: Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-                      child: Column(
-                        children: [
-                          TextField(
-                            onChanged: (value) =>
-                                setState(() => _query = value.trim()),
-                            decoration: const InputDecoration(
-                              hintText: 'Search notices, deadlines, offices...',
-                              prefixIcon: Icon(Icons.search),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _CategoryBar(
-                            selected: _selectedCategory,
-                            onSelected: (value) =>
-                                setState(() => _selectedCategory = value),
-                          ),
-                        ],
+                      child: _PulseStories(
+                        selected: _selectedCategory,
+                        items: allItems,
+                        canPublish: session.canPublishAnnouncements,
+                        onCreate: () => _openPublisher(context, session),
+                        onSelected: (value) =>
+                            setState(() => _selectedCategory = value),
                       ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  sliver: items.isEmpty
-                      ? const SliverToBoxAdapter(
-                          child: EmptyState(
-                            icon: Icons.campaign_outlined,
-                            title: 'No official notices yet',
-                            message:
-                                'Announcements will appear here when the collection has matching items.',
-                          ),
-                        )
-                      : SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                bottom: index == items.length - 1 ? 0 : 12,
-                              ),
-                              child: _AnnouncementCard(item: items[index])
-                                  .animate()
-                                  .fadeIn(duration: 300.ms)
-                                  .slideY(begin: 0.05, end: 0),
-                            );
-                          }, childCount: items.length),
+                  if (featured != null)
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                      sliver: SliverToBoxAdapter(
+                        child:
+                            _FeaturedPulseCard(
+                                  item: featured,
+                                  onOpen: () => _showPostDetail(
+                                    context,
+                                    featured,
+                                    _repository,
+                                    session,
+                                  ),
+                                )
+                                .animate()
+                                .fadeIn(duration: 320.ms)
+                                .slideY(begin: 0.04),
+                      ),
+                    ),
+                  if (items.isEmpty)
+                    const SliverPadding(
+                      padding: EdgeInsets.fromLTRB(24, 26, 24, 32),
+                      sliver: SliverToBoxAdapter(
+                        child: EmptyState(
+                          icon: Icons.dynamic_feed_outlined,
+                          title: 'No Pulse posts yet',
+                          message:
+                              'Official campus posts matching your filters will appear here.',
                         ),
-                ),
-              ],
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+                      sliver: SliverList.separated(
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return _PulsePostCard(
+                                item: item,
+                                likedCount:
+                                    item.likeCount +
+                                    (_localLikes[item.id] ?? 0),
+                                isSaved: _savedPosts.contains(item.id),
+                                onLike: () => _like(item),
+                                onComment: () => _showPostDetail(
+                                  context,
+                                  item,
+                                  _repository,
+                                  session,
+                                ),
+                                onShare: () => _share(item),
+                                onSave: () => _toggleSave(item),
+                                onOpen: () => _showPostDetail(
+                                  context,
+                                  item,
+                                  _repository,
+                                  session,
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(duration: 260.ms)
+                              .slideY(begin: 0.03);
+                        },
+                        separatorBuilder: (_, _) => const SizedBox(height: 18),
+                        itemCount: items.length,
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -188,93 +191,161 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  List<Announcement> _filterItems(List<Announcement> allItems) {
+    return allItems
+        .where(
+          (item) =>
+              _selectedCategory == 'All' ||
+              item.category.toLowerCase() == _selectedCategory.toLowerCase(),
+        )
+        .where((item) {
+          if (_query.isEmpty) return true;
+          final needle = _query.toLowerCase();
+          return item.title.toLowerCase().contains(needle) ||
+              item.content.toLowerCase().contains(needle) ||
+              item.category.toLowerCase().contains(needle) ||
+              item.publishedBy.toLowerCase().contains(needle);
+        })
+        .toList();
+  }
+
+  Future<void> _like(Announcement item) async {
+    setState(() {
+      _localLikes[item.id] = (_localLikes[item.id] ?? 0) + 1;
+    });
+    try {
+      await _repository.like(item.id);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        final next = (_localLikes[item.id] ?? 1) - 1;
+        if (next <= 0) {
+          _localLikes.remove(item.id);
+        } else {
+          _localLikes[item.id] = next;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            describeFirestoreError(
+              error,
+              fallback: 'We could not record that like.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _toggleSave(Announcement item) {
+    setState(() {
+      if (_savedPosts.contains(item.id)) {
+        _savedPosts.remove(item.id);
+      } else {
+        _savedPosts.add(item.id);
+      }
+    });
+  }
+
+  Future<void> _share(Announcement item) async {
+    final message = [
+      'VU Feed: ${item.title}',
+      if (item.content.trim().isNotEmpty) item.content,
+      'Posted by ${item.publishedBy}',
+      if (item.linkUrl.trim().isNotEmpty) item.linkUrl,
+      'Open VU Hub > Feed to view more campus updates.',
+    ].join('\n');
+    await SharePlus.instance.share(
+      ShareParams(text: message, subject: item.title),
+    );
+  }
+
+  void _openSearchSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            8,
+            20,
+            MediaQuery.viewInsetsOf(context).bottom + 24,
+          ),
+          child: TextField(
+            autofocus: true,
+            onChanged: (value) => setState(() => _query = value.trim()),
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search_rounded),
+              labelText: 'Search VU Feed',
+              hintText: 'Events, deadlines, guild, lecturer...',
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _openPublisher(BuildContext context, AppSession session) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (context) => _AnnouncementComposerSheet(session: session),
     );
     if (!context.mounted || result != true) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Announcement published successfully.')),
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('VU Feed post published.')));
+  }
+}
+
+class _PulseLoading extends StatelessWidget {
+  const _PulseLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      children: const [
+        LoadingShimmer(height: 48),
+        SizedBox(height: 16),
+        LoadingShimmer(height: 84),
+        SizedBox(height: 18),
+        LoadingShimmer(height: 220),
+        SizedBox(height: 16),
+        LoadingShimmer(height: 360),
+        SizedBox(height: 16),
+        LoadingShimmer(height: 320),
+      ],
     );
   }
 }
 
-class _FeedHero extends StatelessWidget {
-  const _FeedHero({
-    required this.canPublish,
-    required this.onPublish,
-    required this.scheme,
-    required this.totalCount,
-  });
-
-  final bool canPublish;
-  final VoidCallback onPublish;
-  final ColorScheme scheme;
-  final int totalCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return FeatureHeroBanner(
-      title: 'VU Feed',
-      subtitle:
-          'Announcements, guild updates, urgent notices, and AI-ready summaries in one trusted space.',
-      icon: Icons.verified,
-      scheme: scheme,
-      imageAsset: 'assets/images/vu_default_card.png',
-      badge: '$totalCount notices',
-      trailing: canPublish
-          ? FilledButton.icon(
-              onPressed: onPublish,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Publish'),
-            )
-          : null,
-    ).animate().fadeIn(duration: 320.ms).slideY(begin: 0.05, end: 0);
-  }
-}
-
-class _FeedInsightStrip extends StatelessWidget {
-  const _FeedInsightStrip({
-    required this.totalCount,
-    required this.pinnedCount,
-    required this.urgentCount,
-  });
-
-  final int totalCount;
-  final int pinnedCount;
-  final int urgentCount;
+class _PulseWordmark extends StatelessWidget {
+  const _PulseWordmark();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Expanded(
-          child: _FeedInsightCard(
-            icon: Icons.campaign_outlined,
-            label: 'Notices',
-            value: '$totalCount',
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
             color: scheme.primary,
           ),
+          child: Icon(Icons.bolt_rounded, color: scheme.onPrimary, size: 21),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _FeedInsightCard(
-            icon: Icons.push_pin_outlined,
-            label: 'Pinned',
-            value: '$pinnedCount',
-            color: scheme.secondary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _FeedInsightCard(
-            icon: Icons.warning_amber_rounded,
-            label: 'Urgent',
-            value: '$urgentCount',
-            color: const Color(0xFFEF4444),
+        const SizedBox(width: 10),
+        Text(
+          'VU Feed',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
           ),
         ),
       ],
@@ -282,39 +353,251 @@ class _FeedInsightStrip extends StatelessWidget {
   }
 }
 
-class _FeedInsightCard extends StatelessWidget {
-  const _FeedInsightCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
+class _PulseStories extends StatelessWidget {
+  const _PulseStories({
+    required this.selected,
+    required this.items,
+    required this.canPublish,
+    required this.onCreate,
+    required this.onSelected,
   });
 
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
+  final String selected;
+  final List<Announcement> items;
+  final bool canPublish;
+  final VoidCallback onCreate;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    final categories = _FeedScreenState._categories;
+    final extraCreateItem = canPublish ? 1 : 0;
+    return SizedBox(
+      height: 102,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length + extraCreateItem,
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          if (canPublish && index == 0) {
+            return _PulseCategoryPill(
+              label: 'Create',
+              icon: Icons.add_rounded,
+              selected: false,
+              onTap: onCreate,
+              count: 0,
+            );
+          }
+          final label = categories[index - extraCreateItem];
+          final isAll = label == 'All';
+          final count = items.where((item) {
+            return isAll || item.category.toLowerCase() == label.toLowerCase();
+          }).length;
+          return _PulseCategoryPill(
+            label: label,
+            icon: _categoryIcon(label),
+            selected: selected == label,
+            onTap: () => onSelected(label),
+            count: count,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PulseCategoryPill extends StatelessWidget {
+  const _PulseCategoryPill({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    required this.count,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = _categoryColor(label, scheme);
+    final ringBase = selected ? scheme.primary : scheme.outlineVariant;
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: SizedBox(
+        width: 92,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: color.withValues(alpha: 0.14),
-              child: Icon(icon, color: color, size: 18),
+            AnimatedContainer(
+              duration: 180.ms,
+              width: 66,
+              height: 66,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [ringBase, accent, const Color(0xFFFFC107), ringBase],
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.26),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: CircleAvatar(
+                backgroundColor: scheme.surface,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      color: selected ? scheme.primary : accent,
+                      size: 26,
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        right: -17,
+                        bottom: -17,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: scheme.surface, width: 2),
+                          ),
+                          child: Text(
+                            _compactCount(count),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: scheme.onPrimary,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 10),
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 2),
+            const SizedBox(height: 8),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            if (selected)
+              Container(
+                margin: const EdgeInsets.only(top: 5),
+                width: 18,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedPulseCard extends StatelessWidget {
+  const _FeaturedPulseCard({required this.item, required this.onOpen});
+
+  final Announcement item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: onOpen,
+      child: Container(
+        height: 220,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          color: scheme.surfaceContainerHighest,
+          image: item.imageUrl.isEmpty
+              ? null
+              : DecorationImage(
+                  image: CachedNetworkImageProvider(item.imageUrl),
+                  fit: BoxFit.cover,
+                ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: item.imageUrl.isEmpty
+                        ? _pulseGradientColors(item.category)
+                        : [
+                            Colors.black.withValues(alpha: 0.08),
+                            Colors.black.withValues(alpha: 0.78),
+                          ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GlassBadge(
+                    icon: item.isPinned ? Icons.push_pin : Icons.bolt_rounded,
+                    label: item.isPinned
+                        ? 'Pinned ${item.category}'
+                        : item.category,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.86),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -323,144 +606,629 @@ class _FeedInsightCard extends StatelessWidget {
   }
 }
 
-class _PinnedNoticeRail extends StatelessWidget {
-  const _PinnedNoticeRail({required this.items});
+class _PulsePostCard extends StatelessWidget {
+  const _PulsePostCard({
+    required this.item,
+    required this.likedCount,
+    required this.isSaved,
+    required this.onLike,
+    required this.onComment,
+    required this.onShare,
+    required this.onSave,
+    required this.onOpen,
+  });
 
-  final List<Announcement> items;
+  final Announcement item;
+  final int likedCount;
+  final bool isSaved;
+  final VoidCallback onLike;
+  final VoidCallback onComment;
+  final VoidCallback onShare;
+  final VoidCallback onSave;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Pinned now', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 4),
-        Text(
-          'The notices students should not miss today.',
-          style: Theme.of(context).textTheme.bodyMedium,
+    final role = item.authorRole.isEmpty
+        ? _roleForCategory(item.category)
+        : item.authorRole;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? scheme.surfaceContainerLowest
+            : Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.45),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 164,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return SizedBox(
-                width: 268,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(26),
-                  onTap: () => _showAnnouncementDetail(context, item),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      gradient: LinearGradient(
-                        colors: [
-                          _categoryColor(
-                            item.category,
-                            scheme,
-                          ).withValues(alpha: 0.94),
-                          scheme.surfaceContainerHighest,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _MetaBadge(
-                            icon: Icons.push_pin,
-                            label: item.category,
-                            color: Colors.white,
-                            background: Colors.white.withValues(alpha: 0.16),
-                          ),
-                          const Spacer(),
-                          Text(
-                            item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(color: Colors.white),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item.content,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.88),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.22
+                  : 0.06,
+            ),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onOpen,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 10, 10),
+                  child: Row(
+                    children: [
+                      _AuthorAvatar(item: item),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    item.publishedBy,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: scheme.onSurface,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                  ),
                                 ),
-                          ),
-                        ],
+                                const SizedBox(width: 5),
+                                Icon(
+                                  Icons.verified_rounded,
+                                  size: 16,
+                                  color: _categoryColor(item.category, scheme),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '$role • ${_timeAgo(item.createdAt)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
                       ),
+                      IconButton(
+                        tooltip: 'More',
+                        onPressed: () => _showPostActions(context, item),
+                        icon: Icon(
+                          Icons.more_horiz_rounded,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
-              );
-            },
+                if (item.content.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: Text(
+                      item.content,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: _PulseMedia(item: item),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                  child: Row(
+                    children: [
+                      _PulseIconButton(
+                        icon: Icons.favorite_border_rounded,
+                        activeIcon: Icons.favorite_rounded,
+                        active: likedCount > item.likeCount,
+                        activeColor: const Color(0xFFE11D48),
+                        onTap: onLike,
+                      ),
+                      _PulseIconButton(
+                        icon: Icons.mode_comment_outlined,
+                        onTap: onComment,
+                      ),
+                      _PulseIconButton(
+                        icon: Icons.send_rounded,
+                        onTap: onShare,
+                      ),
+                      const Spacer(),
+                      _PulseIconButton(
+                        icon: Icons.bookmark_border_rounded,
+                        activeIcon: Icons.bookmark_rounded,
+                        active: isSaved,
+                        activeColor: scheme.primary,
+                        onTap: onSave,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_compactCount(likedCount)} likes • ${_compactCount(item.commentCount)} comments • ${_compactCount(item.viewCount)} views',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _PostChip(
+                            icon: _categoryIcon(item.category),
+                            label: item.category,
+                          ),
+                          if (item.isPinned)
+                            const _PostChip(
+                              icon: Icons.push_pin_rounded,
+                              label: 'Pinned',
+                            ),
+                          if (item.linkUrl.isNotEmpty)
+                            _PostChip(
+                              icon: Icons.open_in_new_rounded,
+                              label: 'Open link',
+                              onTap: () => _launchLink(item.linkUrl),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _FeedToolbarDelegate extends SliverPersistentHeaderDelegate {
-  const _FeedToolbarDelegate({required this.child});
+class _AuthorAvatar extends StatelessWidget {
+  const _AuthorAvatar({required this.item});
 
-  final Widget child;
-
-  @override
-  double get minExtent => 126;
+  final Announcement item;
 
   @override
-  double get maxExtent => 126;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(covariant _FeedToolbarDelegate oldDelegate) {
-    return child != oldDelegate.child;
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (item.authorAvatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundImage: CachedNetworkImageProvider(item.authorAvatarUrl),
+      );
+    }
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: _categoryColor(
+        item.category,
+        scheme,
+      ).withValues(alpha: 0.14),
+      child: Icon(
+        _categoryIcon(item.category),
+        color: _categoryColor(item.category, scheme),
+      ),
+    );
   }
 }
 
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({required this.selected, required this.onSelected});
+class _PulseMedia extends StatelessWidget {
+  const _PulseMedia({required this.item});
+
+  final Announcement item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = _categoryColor(item.category, scheme);
+    return AspectRatio(
+      aspectRatio: 1.08,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (item.imageUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: item.imageUrl,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => _GeneratedPulseVisual(item: item),
+              )
+            else
+              _GeneratedPulseVisual(item: item),
+            Positioned(
+              left: 12,
+              top: 12,
+              child: _GlassBadge(
+                icon: _categoryIcon(item.category),
+                label: item.category,
+              ),
+            ),
+            if (item.isPinned)
+              const Positioned(
+                right: 12,
+                top: 12,
+                child: _GlassBadge(
+                  icon: Icons.push_pin_rounded,
+                  label: 'Pinned',
+                ),
+              ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 84,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      accent.withValues(alpha: 0.56),
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GeneratedPulseVisual extends StatelessWidget {
+  const _GeneratedPulseVisual({required this.item});
+
+  final Announcement item;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: _pulseGradientColors(item.category),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -26,
+            top: -20,
+            child: Icon(
+              _categoryIcon(item.category),
+              color: Colors.white.withValues(alpha: 0.18),
+              size: 168,
+            ),
+          ),
+          Positioned(
+            left: 22,
+            right: 22,
+            bottom: 22,
+            child: Text(
+              item.title,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseIconButton extends StatelessWidget {
+  const _PulseIconButton({
+    required this.icon,
+    required this.onTap,
+    this.activeIcon,
+    this.active = false,
+    this.activeColor,
+  });
+
+  final IconData icon;
+  final IconData? activeIcon;
+  final VoidCallback onTap;
+  final bool active;
+  final Color? activeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onTap,
+      icon: AnimatedSwitcher(
+        duration: 180.ms,
+        child: Icon(
+          active ? activeIcon ?? icon : icon,
+          key: ValueKey(active),
+          color: active ? activeColor : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _PostChip extends StatelessWidget {
+  const _PostChip({required this.icon, required this.label, this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(icon, size: 16),
+      label: Text(label),
+      onPressed: onTap,
+      backgroundColor: scheme.surfaceContainerHighest,
+      side: BorderSide.none,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _GlassBadge extends StatelessWidget {
+  const _GlassBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseImagePickerTile extends StatelessWidget {
+  const _PulseImagePickerTile({
+    required this.file,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  final PlatformFile? file;
+  final VoidCallback? onPick;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bytes = file?.bytes;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? scheme.surfaceContainerHighest
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: bytes == null
+                    ? ColoredBox(
+                        color: scheme.surface,
+                        child: Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: scheme.primary,
+                        ),
+                      )
+                    : Image.memory(bytes, fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file == null ? 'Upload from device' : file!.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    file == null
+                        ? 'Use a poster, notice artwork, or campus photo.'
+                        : 'This image will be uploaded to Firebase Storage.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      FilledButton.tonalIcon(
+                        onPressed: onPick,
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(file == null ? 'Choose image' : 'Change'),
+                      ),
+                      if (file != null)
+                        IconButton.filledTonal(
+                          tooltip: 'Remove image',
+                          onPressed: onRemove,
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerCategoryPicker extends StatelessWidget {
+  const _ComposerCategoryPicker({
+    required this.selected,
+    required this.onSelected,
+  });
 
   final String selected;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _FeedScreenState._categories
-            .map(
-              (label) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  selected: label == selected,
-                  label: Text(label),
-                  onSelected: (_) => onSelected(label),
+    final categories = _FeedScreenState._categories
+        .where((item) => item != 'All')
+        .toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = 8.0;
+        final itemWidth = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 8,
+          children: categories.map((category) {
+            return SizedBox(
+              width: itemWidth,
+              child: _ComposerCategoryChip(
+                category: category,
+                selected: selected == category,
+                onTap: () => onSelected(category),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ComposerCategoryChip extends StatelessWidget {
+  const _ComposerCategoryChip({
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String category;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = _categoryColor(category, scheme);
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: 160.ms,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? accent.withValues(alpha: 0.14)
+              : scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? accent : scheme.outlineVariant,
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(_categoryIcon(category), color: accent, size: 19),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                category,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            )
-            .toList(),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: accent, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -481,20 +1249,36 @@ class _AnnouncementComposerSheetState
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _imageController = TextEditingController();
+  final _linkController = TextEditingController();
+  PlatformFile? _selectedImage;
   String _category = 'General';
   bool _isPinned = false;
   bool _isSaving = false;
+  String? _publishError;
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _imageController.dispose();
+    _linkController.dispose();
     super.dispose();
   }
 
   Future<void> _publish() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
+    final user = widget.session.firebaseUser;
+    if (user == null) {
+      setState(() {
+        _publishError = 'Please sign in again before publishing.';
+      });
+      return;
+    }
+    setState(() {
+      _isSaving = true;
+      _publishError = null;
+    });
     final profile = widget.session.profile;
     try {
       await AnnouncementRepository().publishAnnouncement(
@@ -504,11 +1288,446 @@ class _AnnouncementComposerSheetState
         publishedBy:
             profile?.displayName ??
             widget.session.firebaseUser?.email ??
-            'VU Admin',
-        authorId: widget.session.firebaseUser?.uid ?? '',
+            'VU Publisher',
+        authorId: user.uid,
+        authorRole: _roleLabel(profile?.role ?? AppUserRole.student),
+        imageUrl: _imageController.text,
+        imageFile: _selectedImage,
+        linkUrl: _linkController.text,
         isPinned: _isPinned,
       );
       if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _publishError = _describePublishError(error);
+        _isSaving = false;
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null) return;
+    if ((file.bytes == null || file.bytes!.isEmpty) && file.path == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not read that image.')),
+      );
+      return;
+    }
+    setState(() => _selectedImage = file);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 22,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: scheme.primaryContainer,
+                    child: Icon(
+                      Icons.dynamic_feed_rounded,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Create VU Feed post',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        Text(
+                          'Admins, lecturers, and guild officials can publish.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _ComposerCategoryPicker(
+                selected: _category,
+                onSelected: (value) => setState(() => _category = value),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Headline',
+                  hintText: 'Orientation week schedule is out',
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Enter a headline'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _contentController,
+                minLines: 4,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Caption',
+                  hintText: 'Share the update students need to see...',
+                ),
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Enter post caption'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _imageController,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Image URL',
+                  hintText: 'Paste image link, or pick from device below',
+                  prefixIcon: Icon(Icons.image_outlined),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _PulseImagePickerTile(
+                file: _selectedImage,
+                onPick: _isSaving ? null : _pickImage,
+                onRemove: _isSaving
+                    ? null
+                    : () => setState(() => _selectedImage = null),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _linkController,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'Action link',
+                  hintText: 'Optional event, resource, or form link',
+                  prefixIcon: Icon(Icons.link_rounded),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Pin as campus highlight'),
+                subtitle: const Text(
+                  'Use for urgent or high-priority updates.',
+                ),
+                value: _isPinned,
+                onChanged: (value) => setState(() => _isPinned = value),
+              ),
+              if (_publishError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _publishError!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onErrorContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _isSaving ? null : _publish,
+                  icon: _isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.publish_rounded),
+                  label: const Text('Publish to VU Feed'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showPostDetail(
+  BuildContext context,
+  Announcement item,
+  AnnouncementRepository repository,
+  AppSession session,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.82,
+        minChildSize: 0.45,
+        maxChildSize: 0.94,
+        builder: (context, controller) {
+          return ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            children: [
+              _PulseMedia(item: item),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _AuthorAvatar(item: item),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.publishedBy,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        Text(
+                          '${item.authorRole.isEmpty ? _roleForCategory(item.category) : item.authorRole} • ${_dateLabel(item.createdAt)}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _PostChip(
+                    icon: _categoryIcon(item.category),
+                    label: item.category,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                item.title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(item.content, style: Theme.of(context).textTheme.bodyLarge),
+              const SizedBox(height: 18),
+              if (item.linkUrl.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => _launchLink(item.linkUrl),
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: const Text('Open attached link'),
+                ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => showAiInsightSheet(
+                  context: context,
+                  title: 'VU Feed summary',
+                  prompt:
+                      'Summarize this VU Feed post for students. Title: ${item.title}. Category: ${item.category}. Content: ${item.content}',
+                ),
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: const Text('Summarize with AI'),
+              ),
+              const SizedBox(height: 14),
+              Divider(color: scheme.outlineVariant),
+              const SizedBox(height: 14),
+              Text(
+                'Campus replies',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 12),
+              StreamBuilder<List<AnnouncementComment>>(
+                stream: repository.watchComments(item.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: LoadingShimmer(height: 82),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Text(
+                      describeFirestoreError(
+                        snapshot.error!,
+                        fallback: 'Comments are unavailable right now.',
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    );
+                  }
+                  final comments = snapshot.data ?? const [];
+                  if (comments.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Text(
+                        'No replies yet. Start the conversation for this campus update.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    );
+                  }
+                  return Column(
+                    children: comments
+                        .map(
+                          (comment) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _PulseCommentTile(comment: comment),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _PulseCommentComposer(
+                repository: repository,
+                item: item,
+                session: session,
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+class _PulseCommentTile extends StatelessWidget {
+  const _PulseCommentTile({required this.comment});
+
+  final AnnouncementComment comment;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 17,
+          backgroundColor: scheme.primaryContainer,
+          child: Text(
+            comment.displayName.trim().isEmpty
+                ? 'V'
+                : comment.displayName.trim()[0].toUpperCase(),
+            style: TextStyle(
+              color: scheme.onPrimaryContainer,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          comment.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      Text(
+                        _timeAgo(comment.createdAt),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(comment.text),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PulseCommentComposer extends StatefulWidget {
+  const _PulseCommentComposer({
+    required this.repository,
+    required this.item,
+    required this.session,
+  });
+
+  final AnnouncementRepository repository;
+  final Announcement item;
+  final AppSession session;
+
+  @override
+  State<_PulseCommentComposer> createState() => _PulseCommentComposerState();
+}
+
+class _PulseCommentComposerState extends State<_PulseCommentComposer> {
+  final _controller = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isSending) return;
+    setState(() => _isSending = true);
+    final name =
+        widget.session.profile?.displayName ??
+        widget.session.firebaseUser?.displayName ??
+        widget.session.firebaseUser?.email ??
+        'VU Student';
+    try {
+      await widget.repository.sendComment(
+        announcementId: widget.item.id,
+        text: text,
+        displayName: name,
+      );
+      _controller.clear();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -516,420 +1735,203 @@ class _AnnouncementComposerSheetState
           content: Text(
             describeFirestoreError(
               error,
-              fallback: 'We could not publish this announcement.',
+              fallback: 'We could not send this comment.',
             ),
           ),
         ),
       );
-      setState(() => _isSaving = false);
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+    return TextField(
+      controller: _controller,
+      minLines: 1,
+      maxLines: 4,
+      textInputAction: TextInputAction.send,
+      onSubmitted: (_) => _send(),
+      decoration: InputDecoration(
+        hintText: 'Reply to this update...',
+        prefixIcon: const Icon(Icons.mode_comment_outlined),
+        suffixIcon: IconButton.filled(
+          tooltip: 'Send reply',
+          onPressed: _isSending ? null : _send,
+          icon: _isSending
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send_rounded),
+        ),
       ),
-      child: Form(
-        key: _formKey,
+    );
+  }
+}
+
+void _showPostActions(BuildContext context, Announcement item) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) {
+      return SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: scheme.primary.withValues(alpha: 0.12),
-                  ),
-                  child: Icon(Icons.edit_outlined, color: scheme.primary),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Publish announcement',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Create an official notice for students, lecturers, and staff.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_rounded),
+              title: const Text('Summarize with AI'),
+              onTap: () {
+                Navigator.pop(context);
+                showAiInsightSheet(
+                  context: context,
+                  title: 'VU Feed summary',
+                  prompt:
+                      'Summarize this VU Feed post for students. Title: ${item.title}. Category: ${item.category}. Content: ${item.content}',
+                );
+              },
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: scheme.primary.withValues(alpha: 0.08),
+            if (item.linkUrl.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.open_in_new_rounded),
+                title: const Text('Open attached link'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _launchLink(item.linkUrl);
+                },
               ),
-              child: Text(
-                'Tip: concise titles and clear deadlines make announcements feel more professional and easier to summarize with AI.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Enter a title'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _contentController,
-              minLines: 4,
-              maxLines: 8,
-              decoration: const InputDecoration(labelText: 'Content'),
-              validator: (value) => (value == null || value.trim().isEmpty)
-                  ? 'Enter announcement content'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: _FeedScreenState._categories
-                  .where((item) => item != 'All')
-                  .map(
-                    (item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _category = value ?? 'General'),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Pin this announcement'),
-              value: _isPinned,
-              onChanged: (value) => setState(() => _isPinned = value),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _publish,
-              icon: _isSaving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.publish_outlined),
-              label: const Text('Publish'),
+            const ListTile(
+              leading: Icon(Icons.flag_outlined),
+              title: Text('Report post'),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
 
-class _AnnouncementCard extends StatelessWidget {
-  const _AnnouncementCard({required this.item});
-
-  final Announcement item;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = _categoryColor(item.category, scheme);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _showAnnouncementDetail(context, item),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    accent.withValues(alpha: 0.92),
-                    accent.withValues(alpha: 0.72),
-                    scheme.surfaceContainerHighest,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _MetaBadge(
-                        icon: item.isPinned
-                            ? Icons.push_pin
-                            : Icons.verified_outlined,
-                        label: item.category,
-                        color: Colors.white,
-                        background: Colors.white.withValues(alpha: 0.16),
-                      ),
-                      const Spacer(),
-                      if (item.createdAt != null)
-                        Text(
-                          DateFormat('MMM d').format(item.createdAt!),
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(color: Colors.white),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.content,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _MetaBadge(
-                        icon: Icons.account_circle_outlined,
-                        label: item.publishedBy,
-                        color: scheme.primary,
-                        background: scheme.surfaceContainerHighest,
-                      ),
-                      if (item.createdAt != null)
-                        _MetaBadge(
-                          icon: Icons.schedule,
-                          label: DateFormat(
-                            'EEE, MMM d',
-                          ).format(item.createdAt!),
-                          color: scheme.primary,
-                          background: scheme.surfaceContainerHighest,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          onPressed: () =>
-                              _showAnnouncementDetail(context, item),
-                          icon: const Icon(Icons.article_outlined),
-                          label: const Text('Read'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => showAiInsightSheet(
-                            context: context,
-                            title: 'Announcement summary',
-                            prompt:
-                                'Summarize announcement "${item.title}". Category: ${item.category}. Content: ${item.content}',
-                          ),
-                          icon: const Icon(Icons.auto_awesome),
-                          label: const Text('Summarize'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+Future<void> _launchLink(String value) async {
+  final uri = Uri.tryParse(value);
+  if (uri == null) return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
-class _MetaBadge extends StatelessWidget {
-  const _MetaBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.background,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color background;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: color),
-            ),
-          ),
-        ],
-      ),
-    );
+IconData _categoryIcon(String category) {
+  switch (category.trim().toLowerCase()) {
+    case 'all':
+      return Icons.grid_view_rounded;
+    case 'academic':
+      return Icons.menu_book_rounded;
+    case 'events':
+      return Icons.celebration_rounded;
+    case 'guild':
+      return Icons.groups_rounded;
+    case 'urgent':
+      return Icons.priority_high_rounded;
+    case 'general':
+      return Icons.campaign_rounded;
+    default:
+      return Icons.bolt_rounded;
   }
 }
 
 Color _categoryColor(String category, ColorScheme scheme) {
   switch (category.trim().toLowerCase()) {
+    case 'all':
+      return const Color(0xFF2563EB);
     case 'academic':
-      return scheme.primary;
+      return const Color(0xFF2563EB);
     case 'events':
-      return const Color(0xFF8B5CF6);
+      return const Color(0xFF7C3AED);
     case 'guild':
-      return scheme.secondary;
+      return const Color(0xFF0891B2);
     case 'urgent':
-      return const Color(0xFFEF4444);
+      return const Color(0xFFE11D48);
+    case 'general':
+      return const Color(0xFF059669);
     default:
-      return const Color(0xFF0F766E);
+      return scheme.primary;
   }
 }
 
-void _showAnnouncementDetail(BuildContext context, Announcement item) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) {
-      final scheme = Theme.of(context).colorScheme;
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 8,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    colors: [
-                      _categoryColor(item.category, scheme),
-                      scheme.surfaceContainerHighest,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MetaBadge(
-                      icon: item.isPinned
-                          ? Icons.push_pin
-                          : Icons.verified_outlined,
-                      label: item.category,
-                      color: Colors.white,
-                      background: Colors.white.withValues(alpha: 0.16),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      item.title,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _MetaBadge(
-                    icon: Icons.account_circle_outlined,
-                    label: item.publishedBy,
-                    color: scheme.primary,
-                    background: scheme.surfaceContainerHighest,
-                  ),
-                  if (item.createdAt != null)
-                    _MetaBadge(
-                      icon: Icons.schedule,
-                      label: DateFormat(
-                        'EEE, MMM d • HH:mm',
-                      ).format(item.createdAt!),
-                      color: scheme.primary,
-                      background: scheme.surfaceContainerHighest,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Text(item.content, style: Theme.of(context).textTheme.bodyLarge),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => showAiInsightSheet(
-                    context: context,
-                    title: 'Announcement summary',
-                    prompt:
-                        'Summarize announcement "${item.title}". Category: ${item.category}. Content: ${item.content}',
-                  ),
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Summarize with AI'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
+List<Color> _pulseGradientColors(String category) {
+  switch (category.trim().toLowerCase()) {
+    case 'academic':
+      return const [Color(0xFF1D4ED8), Color(0xFF0F766E), Color(0xFF312E81)];
+    case 'events':
+      return const [Color(0xFF7C3AED), Color(0xFFBE123C), Color(0xFF0F172A)];
+    case 'guild':
+      return const [Color(0xFF0891B2), Color(0xFF1D4ED8), Color(0xFF581C87)];
+    case 'urgent':
+      return const [Color(0xFFE11D48), Color(0xFFEA580C), Color(0xFF1E1B4B)];
+    case 'general':
+      return const [Color(0xFF059669), Color(0xFF0E7490), Color(0xFF1E3A8A)];
+    default:
+      return const [Color(0xFF2563EB), Color(0xFF0891B2), Color(0xFF312E81)];
+  }
+}
+
+String _roleForCategory(String category) {
+  switch (category.trim().toLowerCase()) {
+    case 'academic':
+      return 'Lecturer';
+    case 'guild':
+      return 'Guild official';
+    case 'urgent':
+      return 'Admin notice';
+    default:
+      return 'Campus publisher';
+  }
+}
+
+String _roleLabel(AppUserRole role) {
+  switch (role) {
+    case AppUserRole.admin:
+      return 'Admin';
+    case AppUserRole.lecturer:
+      return 'Lecturer';
+    case AppUserRole.guildOfficial:
+      return 'Guild official';
+    case AppUserRole.student:
+    case AppUserRole.unknown:
+      return 'Campus publisher';
+  }
+}
+
+String _describePublishError(Object error) {
+  final message = describeFirestoreError(
+    error,
+    fallback: 'We could not publish this VU Feed post.',
   );
+  if (message != 'We could not publish this VU Feed post.') {
+    return message;
+  }
+  final raw = error.toString().replaceFirst('Exception: ', '').trim();
+  if (raw.isNotEmpty) return raw;
+  return message;
+}
+
+String _timeAgo(DateTime? date) {
+  if (date == null) return 'Just now';
+  final now = DateTime.now();
+  final diff = now.difference(date);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+  if (diff.inDays < 1) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return DateFormat('MMM d').format(date);
+}
+
+String _dateLabel(DateTime? date) {
+  if (date == null) return 'Just now';
+  return DateFormat('EEE, MMM d • HH:mm').format(date);
+}
+
+String _compactCount(int value) {
+  if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+  if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+  return '$value';
 }

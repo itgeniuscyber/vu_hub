@@ -19,7 +19,10 @@ class UserProfile {
   final String faculty;
   final String regNo;
 
-  bool get canPublishAnnouncements => role == AppUserRole.admin;
+  bool get canPublishAnnouncements =>
+      role == AppUserRole.admin ||
+      role == AppUserRole.lecturer ||
+      role == AppUserRole.guildOfficial;
 
   bool get canUploadResources =>
       role == AppUserRole.admin || role == AppUserRole.lecturer;

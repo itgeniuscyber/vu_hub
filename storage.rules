@@ -10,14 +10,29 @@ service firebase.storage {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
     }
 
-    function hasRole(role) {
+    function hasRole(roles) {
       return signedIn() &&
         firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-        userDoc().data.role in role;
+        (
+          userDoc().data.get('role', '') in roles ||
+          userDoc().data.get('userRole', '') in roles ||
+          userDoc().data.get('accountType', '') in roles
+        );
     }
 
     function staffUploader() {
-      return hasRole(['admin', 'administrator', 'lecturer', 'teacher']);
+      return hasRole([
+        'admin',
+        'administrator',
+        'Admin',
+        'Administrator',
+        'ADMIN',
+        'lecturer',
+        'teacher',
+        'Lecturer',
+        'Teacher',
+        'LECTURER'
+      ]);
     }
 
     match /past_papers/{userId}/{fileName} {
@@ -40,6 +55,14 @@ service firebase.storage {
       allow write: if signedIn() &&
         request.auth.uid == userId &&
         request.resource.size < 8 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    match /pulse_images/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.size < 10 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
     }
 
