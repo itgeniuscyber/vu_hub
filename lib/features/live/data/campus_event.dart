@@ -16,6 +16,12 @@ class CampusEvent {
     required this.category,
     required this.isFeatured,
     required this.imageUrl,
+    required this.hostName,
+    required this.hostAvatarUrl,
+    required this.viewerCount,
+    required this.likeCount,
+    required this.giftCount,
+    required this.commentCount,
   });
 
   final String id;
@@ -28,6 +34,12 @@ class CampusEvent {
   final String category;
   final bool isFeatured;
   final String? imageUrl;
+  final String hostName;
+  final String? hostAvatarUrl;
+  final int viewerCount;
+  final int likeCount;
+  final int giftCount;
+  final int commentCount;
 
   CampusEventStatus get status {
     final now = DateTime.now();
@@ -83,6 +95,38 @@ class CampusEvent {
         'thumbnailUrl',
         'photoUrl',
       ]),
+      hostName: firstString(data, [
+        'hostName',
+        'creatorName',
+        'organizer',
+        'postedBy',
+        'authorName',
+      ], fallback: 'VU Live'),
+      hostAvatarUrl: firstString(data, [
+        'hostAvatarUrl',
+        'hostPhotoUrl',
+        'creatorAvatar',
+        'avatarUrl',
+        'profileImage',
+      ]),
+      viewerCount:
+          firstInt(data, ['viewerCount', 'viewers', 'watching']) ??
+          _fallbackCount(doc.id, 900, 8500),
+      likeCount:
+          firstInt(data, ['likeCount', 'likes', 'reactions']) ??
+          _fallbackCount('${doc.id}_likes', 120, 2400),
+      giftCount:
+          firstInt(data, ['giftCount', 'gifts']) ??
+          _fallbackCount('${doc.id}_gifts', 8, 220),
+      commentCount:
+          firstInt(data, ['commentCount', 'comments']) ??
+          _fallbackCount('${doc.id}_comments', 12, 360),
     );
+  }
+
+  static int _fallbackCount(String seed, int min, int max) {
+    final spread = max - min;
+    if (spread <= 0) return min;
+    return min + seed.hashCode.abs() % spread;
   }
 }

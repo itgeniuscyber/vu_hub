@@ -96,6 +96,56 @@ service cloud.firestore {
       allow create, update, delete: if admin() || lecturer();
     }
 
+    match /live_posts/{postId} {
+      function recordsLiveView() {
+        return signedIn() &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['viewerCount', 'playCount']) &&
+          request.resource.data.get('playCount', 0) == resource.data.get('playCount', 0) + 1 &&
+          (
+            request.resource.data.get('viewerCount', 0) == resource.data.get('viewerCount', 0) ||
+            request.resource.data.get('viewerCount', 0) == resource.data.get('viewerCount', 0) + 1
+          );
+      }
+
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.hostId == request.auth.uid;
+      allow update: if admin() ||
+        (signedIn() && resource.data.hostId == request.auth.uid) ||
+        recordsLiveView();
+      allow delete: if admin() ||
+        (signedIn() && resource.data.hostId == request.auth.uid);
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() &&
+          request.resource.data.userId == request.auth.uid;
+        allow update, delete: if admin() ||
+          (signedIn() && resource.data.userId == request.auth.uid);
+      }
+
+      match /gifts/{giftId} {
+        allow read: if signedIn();
+        allow create: if signedIn() &&
+          request.resource.data.userId == request.auth.uid;
+        allow update, delete: if admin();
+      }
+
+      match /views/{viewerId} {
+        allow read: if admin() ||
+          (signedIn() && request.auth.uid == viewerId) ||
+          (signedIn() && get(/databases/$(database)/documents/live_posts/$(postId)).data.hostId == request.auth.uid);
+        allow create: if signedIn() &&
+          viewerId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid;
+        allow update: if signedIn() &&
+          viewerId == request.auth.uid &&
+          resource.data.userId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid;
+        allow delete: if admin();
+      }
+    }
+
     match /guild_posts/{postId} {
       allow read: if signedIn();
       allow create, update, delete: if admin() || guildOfficial();

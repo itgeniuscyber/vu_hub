@@ -7,6 +7,8 @@ import 'package:vu_hub/features/directory/data/directory_repository.dart';
 import 'package:vu_hub/features/directory/data/vu_resource_repository.dart';
 import 'package:vu_hub/features/feed/data/announcement_repository.dart';
 import 'package:vu_hub/features/live/data/events_repository.dart';
+import 'package:vu_hub/features/live/data/live_post.dart';
+import 'package:vu_hub/features/live/data/live_posts_repository.dart';
 import 'package:vu_hub/features/vault/data/vault_repository.dart';
 
 void main() {
@@ -129,6 +131,35 @@ void main() {
         expect(items.single.isFeatured, isTrue);
       },
     );
+
+    test('LivePostsRepository reads short videos and live posts', () async {
+      final firestore = FakeFirebaseFirestore();
+      await firestore.collection('live_posts').doc('post_1').set({
+        'type': 'short_video',
+        'status': 'published',
+        'title': 'Campus moment',
+        'description': 'Students showcasing a campus activity',
+        'hostId': 'uid_1',
+        'hostName': 'Student Creator',
+        'category': 'Campus',
+        'videoUrl': 'https://example.com/video.mp4',
+        'coverUrl': 'https://example.com/cover.jpg',
+        'viewerCount': 15,
+        'likeCount': 3,
+        'giftCount': 1,
+        'commentCount': 2,
+        'createdAt': Timestamp.fromDate(DateTime(2026, 7, 13)),
+      });
+
+      final items = await LivePostsRepository(
+        firestore: firestore,
+      ).watchFeed().first;
+
+      expect(items.single.type, LivePostType.shortVideo);
+      expect(items.single.status, LivePostStatus.published);
+      expect(items.single.primaryVideoUrl, contains('video.mp4'));
+      expect(items.single.likeCount, 3);
+    });
 
     test(
       'VuResourceRepository reads vu_resources compatibility fields',

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>VU Hub needs camera access so you can host campus live broadcasts.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>VU Hub needs microphone access so students can hear your live broadcast.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

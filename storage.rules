@@ -43,6 +43,17 @@ service firebase.storage {
         request.resource.contentType.matches('image/.*');
     }
 
+    match /live_posts/{userId}/{folder}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.size < 150 * 1024 * 1024 &&
+        (
+          request.resource.contentType.matches('video/.*') ||
+          request.resource.contentType.matches('image/.*')
+        );
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
