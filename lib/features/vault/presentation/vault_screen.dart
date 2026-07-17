@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -115,13 +116,18 @@ class _VaultScreenState extends State<VaultScreen> {
                       title: 'VU Vault',
                       subtitle:
                           'Past papers and study materials mapped safely from the existing `past_papers` collection.',
-                      icon: Icons.folder_copy_outlined,
+                      icon: BoldRounded.folder,
                       scheme: scheme,
                       badge: '${allResources.length} resources',
+                      height: 212,
                       trailing: session.canUploadResources
                           ? FilledButton.icon(
                               onPressed: () => _openUploader(context, session),
-                              icon: const Icon(Icons.upload_file_outlined),
+                              icon: const FUI(
+                                BoldRounded.cloudUpload,
+                                width: 16,
+                                height: 16,
+                              ),
                               label: const Text('Upload'),
                             )
                           : null,
@@ -279,7 +285,7 @@ class _VaultScreenState extends State<VaultScreen> {
                   sliver: resources.isEmpty
                       ? const SliverToBoxAdapter(
                           child: EmptyState(
-                            icon: Icons.folder_copy_outlined,
+                            icon: BoldRounded.folder,
                             title: 'No matching resources',
                             message:
                                 'Try a different faculty filter or broader search term.',
@@ -403,21 +409,21 @@ class _VaultInsightStrip extends StatelessWidget {
         final compact = constraints.maxWidth < 390;
         final cards = [
           _VaultInsightCard(
-            icon: Icons.folder_copy_outlined,
+            icon: BoldRounded.folder,
             label: 'Resources',
             value: '$totalCount',
             color: scheme.primary,
             compact: compact,
           ),
           _VaultInsightCard(
-            icon: Icons.apartment_outlined,
+            icon: BoldRounded.building,
             label: 'Faculties',
             value: '$facultyCount',
             color: scheme.secondary,
             compact: compact,
           ),
           _VaultInsightCard(
-            icon: Icons.file_open_outlined,
+            icon: BoldRounded.fileCheck,
             label: 'Ready',
             value: '$fileReadyCount',
             color: scheme.tertiary,
@@ -461,7 +467,7 @@ class _VaultInsightCard extends StatelessWidget {
     this.compact = false,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final String value;
   final Color color;
@@ -481,7 +487,7 @@ class _VaultInsightCard extends StatelessWidget {
             CircleAvatar(
               radius: 18,
               backgroundColor: color.withValues(alpha: 0.14),
-              child: Icon(icon, color: color, size: 18),
+              child: FUI(icon, color: color, width: 18, height: 18),
             ),
             const SizedBox(height: 10),
             Text(value, style: Theme.of(context).textTheme.titleMedium),
@@ -545,7 +551,12 @@ class _VaultSearchBar extends StatelessWidget {
           hintText: 'Search past papers, faculties, and subjects',
           prefixIcon: Container(
             margin: const EdgeInsets.only(left: 10, right: 6),
-            child: Icon(Icons.search, color: scheme.primary),
+            child: FUI(
+              BoldRounded.search,
+              color: scheme.primary,
+              width: 20,
+              height: 20,
+            ),
           ),
           suffixIcon: AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
@@ -553,15 +564,22 @@ class _VaultSearchBar extends StatelessWidget {
                 ? IconButton(
                     key: const ValueKey('clear'),
                     onPressed: onClear,
-                    icon: Icon(Icons.close_rounded, color: scheme.primary),
+                    icon: FUI(
+                      BoldRounded.cross,
+                      color: scheme.primary,
+                      width: 20,
+                      height: 20,
+                    ),
                     tooltip: 'Clear search',
                   )
                 : Container(
                     key: const ValueKey('tune'),
                     margin: const EdgeInsets.only(right: 8),
-                    child: Icon(
-                      Icons.tune_rounded,
+                    child: FUI(
+                      BoldRounded.filter,
                       color: scheme.onSurfaceVariant,
+                      width: 20,
+                      height: 20,
                     ),
                   ),
           ),
@@ -610,13 +628,13 @@ class _VaultViewToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _VaultViewToggleButton(
-            icon: Icons.view_agenda_rounded,
+            icon: BoldRounded.list,
             selected: mode == _VaultViewMode.list,
             onTap: () => onChanged(_VaultViewMode.list),
           ),
           const SizedBox(width: 4),
           _VaultViewToggleButton(
-            icon: Icons.grid_view_rounded,
+            icon: BoldRounded.grid,
             selected: mode == _VaultViewMode.grid,
             onTap: () => onChanged(_VaultViewMode.grid),
           ),
@@ -633,7 +651,7 @@ class _VaultViewToggleButton extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -650,9 +668,10 @@ class _VaultViewToggleButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           color: selected ? scheme.primary : Colors.transparent,
         ),
-        child: Icon(
+        child: FUI(
           icon,
-          size: 18,
+          width: 18,
+          height: 18,
           color: selected ? Colors.white : scheme.onSurfaceVariant,
         ),
       ),
@@ -672,7 +691,7 @@ class _VaultActionButton extends StatelessWidget {
     this.compact = false,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final _VaultActionStyle style;
   final VoidCallback onTap;
@@ -729,7 +748,12 @@ class _VaultActionButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: compact ? 15 : 18, color: foreground),
+                FUI(
+                  icon,
+                  width: compact ? 15 : 18,
+                  height: compact ? 15 : 18,
+                  color: foreground,
+                ),
                 SizedBox(width: compact ? 5 : 8),
                 Flexible(
                   child: Text(
@@ -835,7 +859,7 @@ class _VaultSpotlightCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _VaultBadge(
-                    icon: Icons.bookmark_outline,
+                    icon: BoldRounded.bookmark,
                     label: resource.fileType.toUpperCase(),
                     color: Colors.white,
                     background: Colors.white.withValues(alpha: 0.16),
@@ -932,14 +956,14 @@ class _VaultResourceCard extends StatelessWidget {
                           runSpacing: 8,
                           children: [
                             _VaultBadge(
-                              icon: Icons.apartment_outlined,
+                              icon: BoldRounded.building,
                               label: resource.faculty,
                               color: Colors.white,
                               background: Colors.white.withValues(alpha: 0.16),
                               maxWidth: 190,
                             ),
                             _VaultBadge(
-                              icon: Icons.insert_drive_file_outlined,
+                              icon: BoldRounded.file,
                               label: resource.fileType.toUpperCase(),
                               color: Colors.white,
                               background: Colors.white.withValues(alpha: 0.16),
@@ -980,14 +1004,14 @@ class _VaultResourceCard extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _VaultBadge(
-                        icon: Icons.auto_awesome,
+                        icon: BoldRounded.magicWand,
                         label: 'AI summary',
                         color: scheme.primary,
                         background: scheme.surfaceContainerHighest,
                         maxWidth: 120,
                       ),
                       _VaultBadge(
-                        icon: Icons.quiz_outlined,
+                        icon: BoldRounded.listCheck,
                         label: 'Revision ready',
                         color: scheme.primary,
                         background: scheme.surfaceContainerHighest,
@@ -1000,7 +1024,7 @@ class _VaultResourceCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _VaultActionButton(
-                          icon: Icons.open_in_new,
+                          icon: BoldRounded.link,
                           label: 'Open paper',
                           style: _VaultActionStyle.primary,
                           enabled: resource.fileUrl.isNotEmpty,
@@ -1010,7 +1034,7 @@ class _VaultResourceCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _VaultActionButton(
-                          icon: Icons.auto_awesome,
+                          icon: BoldRounded.magicWand,
                           label: 'AI summary',
                           style: _VaultActionStyle.secondary,
                           onTap: () => showAiInsightSheet(
@@ -1091,7 +1115,7 @@ class _VaultResourceGridCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _VaultBadge(
-                          icon: Icons.insert_drive_file_outlined,
+                          icon: BoldRounded.file,
                           label: resource.fileType.toUpperCase(),
                           color: Colors.white,
                           background: Colors.white.withValues(alpha: 0.16),
@@ -1138,7 +1162,7 @@ class _VaultResourceGridCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _VaultActionButton(
-                          icon: Icons.open_in_new,
+                          icon: BoldRounded.link,
                           label: 'Open',
                           style: _VaultActionStyle.primary,
                           enabled: resource.fileUrl.isNotEmpty,
@@ -1149,7 +1173,7 @@ class _VaultResourceGridCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _VaultActionButton(
-                          icon: Icons.auto_awesome,
+                          icon: BoldRounded.magicWand,
                           label: 'AI',
                           style: _VaultActionStyle.secondary,
                           compact: true,
@@ -1304,9 +1328,11 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
                       borderRadius: BorderRadius.circular(16),
                       color: scheme.primary.withValues(alpha: 0.12),
                     ),
-                    child: Icon(
-                      Icons.cloud_upload_outlined,
+                    child: FUI(
+                      BoldRounded.cloudUpload,
                       color: scheme.primary,
+                      width: 22,
+                      height: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1388,7 +1414,7 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       onPressed: _pickFile,
-                      icon: const Icon(Icons.attach_file),
+                      icon: const FUI(BoldRounded.clip, width: 18, height: 18),
                       label: Text(
                         _selectedFile == null
                             ? 'Pick file'
@@ -1398,7 +1424,11 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: _pickThumbnail,
-                      icon: const Icon(Icons.image_outlined),
+                      icon: const FUI(
+                        BoldRounded.picture,
+                        width: 18,
+                        height: 18,
+                      ),
                       label: Text(
                         _selectedThumbnail == null
                             ? 'Pick thumbnail image'
@@ -1432,7 +1462,7 @@ class _VaultUploadSheetState extends State<_VaultUploadSheet> {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.cloud_upload_outlined),
+                    : const FUI(BoldRounded.cloudUpload, width: 18, height: 18),
                 label: const Text('Upload resource'),
               ),
             ],
@@ -1452,7 +1482,7 @@ class _VaultBadge extends StatelessWidget {
     this.maxWidth = 180,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color color;
   final Color background;
@@ -1471,7 +1501,7 @@ class _VaultBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
+            FUI(icon, width: 16, height: 16, color: color),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -1532,13 +1562,13 @@ void _showResourceDetail(BuildContext context, VaultResource resource) {
                       runSpacing: 8,
                       children: [
                         _VaultBadge(
-                          icon: Icons.apartment_outlined,
+                          icon: BoldRounded.building,
                           label: resource.faculty,
                           color: Colors.white,
                           background: Colors.white.withValues(alpha: 0.16),
                         ),
                         _VaultBadge(
-                          icon: Icons.insert_drive_file_outlined,
+                          icon: BoldRounded.file,
                           label: resource.fileType.toUpperCase(),
                           color: Colors.white,
                           background: Colors.white.withValues(alpha: 0.16),
@@ -1561,14 +1591,14 @@ void _showResourceDetail(BuildContext context, VaultResource resource) {
                 runSpacing: 8,
                 children: [
                   _VaultBadge(
-                    icon: Icons.account_circle_outlined,
+                    icon: BoldRounded.user,
                     label: resource.uploadedBy,
                     color: scheme.primary,
                     background: scheme.surfaceContainerHighest,
                   ),
                   if (resource.uploadedAt != null)
                     _VaultBadge(
-                      icon: Icons.schedule,
+                      icon: BoldRounded.clock,
                       label: DateFormat(
                         'EEE, MMM d',
                       ).format(resource.uploadedAt!),
@@ -1596,7 +1626,7 @@ void _showResourceDetail(BuildContext context, VaultResource resource) {
                           );
                         }
                       },
-                      icon: const Icon(Icons.open_in_new),
+                      icon: const FUI(BoldRounded.link, width: 18, height: 18),
                       label: const Text('Open resource'),
                     ),
                   ),
@@ -1609,7 +1639,11 @@ void _showResourceDetail(BuildContext context, VaultResource resource) {
                         prompt:
                             'Summarize resource "${resource.title}" from ${resource.faculty}. File type: ${resource.fileType}. Study with AI.',
                       ),
-                      icon: const Icon(Icons.auto_awesome),
+                      icon: const FUI(
+                        BoldRounded.magicWand,
+                        width: 18,
+                        height: 18,
+                      ),
                       label: const Text('Study with AI'),
                     ),
                   ),

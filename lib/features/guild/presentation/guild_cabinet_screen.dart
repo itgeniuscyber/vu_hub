@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/section_header.dart';
@@ -20,7 +21,7 @@ class GuildCabinetScreen extends StatelessWidget {
               title: 'Guild Cabinet',
               subtitle:
                   'Explore the guild office in a clearer hierarchy so students know which leaders handle representation, welfare, academics, and communication.',
-              icon: Icons.account_tree_outlined,
+              icon: BoldRounded.network,
               scheme: scheme,
               badge: 'Leadership structure',
               height: 188,
@@ -60,7 +61,6 @@ class _GuildCabinetSpotlight extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final icon = IconData(member.iconCodePoint, fontFamily: 'MaterialIcons');
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -91,7 +91,12 @@ class _GuildCabinetSpotlight extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               color: Colors.white.withValues(alpha: 0.16),
             ),
-            child: Icon(icon, color: Colors.white),
+            child: FUI(
+              _memberIcon(member),
+              color: Colors.white,
+              width: 24,
+              height: 24,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -141,12 +146,12 @@ class _GuildCabinetSpotlight extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _GuildPill(
-                      icon: Icons.apartment_outlined,
+                      icon: BoldRounded.building,
                       label: member.office,
                       dark: true,
                     ),
                     _GuildPill(
-                      icon: Icons.contact_support_outlined,
+                      icon: BoldRounded.headset,
                       label: member.contactHint,
                       dark: true,
                     ),
@@ -214,7 +219,6 @@ class _GuildCabinetMemberCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final icon = IconData(member.iconCodePoint, fontFamily: 'MaterialIcons');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -231,7 +235,12 @@ class _GuildCabinetMemberCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     color: scheme.primary.withValues(alpha: 0.1),
                   ),
-                  child: Icon(icon, color: scheme.primary),
+                  child: FUI(
+                    _memberIcon(member),
+                    color: scheme.primary,
+                    width: 22,
+                    height: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -261,11 +270,8 @@ class _GuildCabinetMemberCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _GuildPill(icon: Icons.badge_outlined, label: member.office),
-                _GuildPill(
-                  icon: Icons.route_outlined,
-                  label: member.contactHint,
-                ),
+                _GuildPill(icon: BoldRounded.badge, label: member.office),
+                _GuildPill(icon: BoldRounded.map, label: member.contactHint),
               ],
             ),
           ],
@@ -282,7 +288,7 @@ class _GuildPill extends StatelessWidget {
     this.dark = false,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final bool dark;
 
@@ -302,7 +308,7 @@ class _GuildPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: foreground),
+          FUI(icon, width: 14, height: 14, color: foreground),
           const SizedBox(width: 6),
           Text(
             label,
@@ -326,6 +332,24 @@ class _GuildCabinetGroupData {
   final String title;
   final String subtitle;
   final List<GuildCabinetMember> members;
+}
+
+String _memberIcon(GuildCabinetMember member) {
+  final text = '${member.role} ${member.office} ${member.scope}'.toLowerCase();
+  if (text.contains('academic')) return BoldRounded.school;
+  if (text.contains('finance') || text.contains('treasurer')) {
+    return BoldRounded.money;
+  }
+  if (text.contains('welfare') || text.contains('health')) {
+    return BoldRounded.handHoldingHeart;
+  }
+  if (text.contains('media') || text.contains('publicity')) {
+    return BoldRounded.megaphone;
+  }
+  if (text.contains('security')) return BoldRounded.shield;
+  if (text.contains('secretary')) return BoldRounded.file;
+  if (member.isExecutive) return BoldRounded.badge;
+  return BoldRounded.user;
 }
 
 final _guildCabinet = [

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -25,14 +26,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       alignment: Alignment.center,
       badges: [
         _SlideBadge(
-          icon: Icons.auto_awesome,
+          icon: BoldRounded.magicWand,
           label: 'Vault',
           value: '+200%',
           alignment: Alignment.centerLeft,
           padding: EdgeInsets.only(left: 30, bottom: 40),
         ),
         _SlideBadge(
-          icon: Icons.school,
+          icon: BoldRounded.school,
           label: 'Study',
           value: 'Smart',
           alignment: Alignment.centerRight,
@@ -49,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       alignment: Alignment.bottomCenter,
       badges: [
         _SlideBadge(
-          icon: Icons.campaign,
+          icon: BoldRounded.megaphone,
           label: 'Alerts',
           value: 'Live',
           alignment: Alignment.centerLeft,
@@ -66,7 +67,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       alignment: Alignment.topCenter,
       badges: [
         _SlideBadge(
-          icon: Icons.hub,
+          icon: BoldRounded.apps,
           label: 'VU Hub',
           value: 'Pro',
           alignment: Alignment.centerRight,
@@ -322,17 +323,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Icon(
-                                        Icons.arrow_forward,
+                                      FUI(
+                                        BoldRounded.arrowRight,
                                         color: bgColor,
-                                        size: 20,
+                                        width: 20,
+                                        height: 20,
                                       ),
                                     ],
                                   )
-                                : Icon(
-                                    Icons.arrow_forward,
+                                : FUI(
+                                    BoldRounded.arrowRight,
                                     color: bgColor,
-                                    size: 28,
+                                    width: 28,
+                                    height: 28,
                                   ),
                           ),
                         ),
@@ -356,7 +359,7 @@ class _FloatingBadge extends StatelessWidget {
     required this.value,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final String value;
 
@@ -383,7 +386,7 @@ class _FloatingBadge extends StatelessWidget {
                   color: scheme.primary,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: Colors.white, size: 14),
+                child: FUI(icon, color: Colors.white, width: 14, height: 14),
               ),
               const SizedBox(width: 8),
               Text(
@@ -420,7 +423,7 @@ class _SlideBadge {
     required this.padding,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final String value;
   final Alignment alignment;

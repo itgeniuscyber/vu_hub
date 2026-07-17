@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 class AuthBackdrop extends StatelessWidget {
   const AuthBackdrop({super.key, required this.child});
@@ -124,7 +125,12 @@ class AuthShowcasePanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(26),
               color: Colors.white.withValues(alpha: 0.1),
             ),
-            child: const Icon(Icons.school, color: Colors.white, size: 40),
+            child: const FUI(
+              BoldRounded.school,
+              color: Colors.white,
+              width: 40,
+              height: 40,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -176,7 +182,7 @@ class AuthHighlight {
     required this.subtitle,
   });
 
-  final IconData icon;
+  final Object icon;
   final String title;
   final String subtitle;
 }
@@ -189,7 +195,7 @@ class AuthInfoBanner extends StatelessWidget {
     required this.message,
   });
 
-  final IconData icon;
+  final Object icon;
   final String title;
   final String message;
 
@@ -213,7 +219,7 @@ class AuthInfoBanner extends StatelessWidget {
               color: scheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: scheme.primary),
+            child: _AuthIcon(icon: icon, color: scheme.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -307,7 +313,7 @@ class _HighlightTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   color: Colors.white.withValues(alpha: 0.14),
                 ),
-                child: Icon(item.icon, color: Colors.white),
+                child: _AuthIcon(icon: item.icon, color: Colors.white),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -335,6 +341,22 @@ class _HighlightTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AuthIcon extends StatelessWidget {
+  const _AuthIcon({required this.icon, required this.color});
+
+  final Object icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = icon;
+    if (value is String) {
+      return FUI(value, color: color, width: 22, height: 22);
+    }
+    return Icon(value as IconData, color: color);
   }
 }
 

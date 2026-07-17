@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -30,7 +31,7 @@ class CommunityDiscussionsScreen extends StatelessWidget {
     return const _CommunityListPage(
       title: 'Discussions',
       subtitle: 'Academic questions and helpful campus threads',
-      icon: Icons.question_answer_outlined,
+      icon: BoldRounded.comments,
       child: _DiscussionTab(),
     );
   }
@@ -44,7 +45,7 @@ class CommunityPostsScreen extends StatelessWidget {
     return const _CommunityListPage(
       title: 'Campus Posts',
       subtitle: 'Student updates, guild posts, and shared moments',
-      icon: Icons.dynamic_feed_outlined,
+      icon: BoldRounded.megaphone,
       child: _PostsTab(),
     );
   }
@@ -60,7 +61,7 @@ class _CommunityListPage extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String icon;
   final Widget child;
 
   @override
@@ -72,7 +73,7 @@ class _CommunityListPage extends StatelessWidget {
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.maybePop(context),
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const FUI(BoldRounded.arrowLeft),
         ),
       ),
       body: SafeArea(
@@ -100,7 +101,12 @@ class _CommunityListPage extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       backgroundColor: scheme.primary.withValues(alpha: 0.14),
-                      child: Icon(icon, color: scheme.primary),
+                      child: FUI(
+                        icon,
+                        color: scheme.primary,
+                        width: 22,
+                        height: 22,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -254,7 +260,7 @@ class _PublicChatTabState extends State<_PublicChatTab> {
                     if (snapshot.hasError) {
                       return FirestoreErrorState(
                         error: snapshot.error!,
-                        icon: Icons.forum_outlined,
+                        icon: BoldRounded.comments,
                         title: 'Public chat unavailable',
                         fallbackMessage:
                             'Messages from the public chat could not be loaded.',
@@ -263,7 +269,7 @@ class _PublicChatTabState extends State<_PublicChatTab> {
                     final items = snapshot.data ?? [];
                     if (items.isEmpty) {
                       return const EmptyState(
-                        icon: Icons.chat_bubble_outline,
+                        icon: BoldRounded.comment,
                         title: 'No public chat yet',
                         message:
                             'Messages from `public_chat` will appear here when available.',
@@ -363,7 +369,7 @@ class _ChatRoomHeader extends StatelessWidget {
             IconButton(
               tooltip: 'Back',
               onPressed: () => Navigator.maybePop(context),
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: const FUI(BoldRounded.arrowLeft),
             ),
             const SizedBox(width: 2),
           ],
@@ -379,7 +385,12 @@ class _ChatRoomHeader extends StatelessWidget {
               ),
             ),
             child: const Center(
-              child: Icon(Icons.school_rounded, color: Colors.white),
+              child: FUI(
+                BoldRounded.school,
+                color: Colors.white,
+                width: 22,
+                height: 22,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -406,12 +417,22 @@ class _ChatRoomHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Voice call',
             onPressed: null,
-            icon: Icon(Icons.call_outlined, color: scheme.primary),
+            icon: FUI(
+              BoldRounded.phoneCall,
+              color: scheme.primary,
+              width: 21,
+              height: 21,
+            ),
           ),
           IconButton(
             tooltip: 'Video call',
             onPressed: null,
-            icon: Icon(Icons.video_call_outlined, color: scheme.primary),
+            icon: FUI(
+              BoldRounded.videoCamera,
+              color: scheme.primary,
+              width: 21,
+              height: 21,
+            ),
           ),
         ],
       ),
@@ -544,9 +565,11 @@ class _ChatBubble extends StatelessWidget {
                             errorWidget: (_, _, _) => Container(
                               height: 132,
                               color: Colors.black.withValues(alpha: 0.12),
-                              child: Icon(
-                                Icons.image_not_supported_outlined,
+                              child: FUI(
+                                BoldRounded.picture,
                                 color: metaColor,
+                                width: 28,
+                                height: 28,
                               ),
                             ),
                           ),
@@ -615,9 +638,10 @@ class _ChatBubble extends StatelessWidget {
                           ),
                           if (isMe) ...[
                             const SizedBox(width: 4),
-                            Icon(
-                              Icons.done_all_rounded,
-                              size: 14,
+                            FUI(
+                              SolidRounded.check,
+                              width: 14,
+                              height: 14,
                               color: Colors.cyanAccent.withValues(alpha: 0.9),
                             ),
                           ],
@@ -627,9 +651,10 @@ class _ChatBubble extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                             child: Padding(
                               padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.reply_rounded,
-                                size: 16,
+                              child: FUI(
+                                BoldRounded.undo,
+                                width: 16,
+                                height: 16,
                                 color: metaColor,
                               ),
                             ),
@@ -790,7 +815,7 @@ class _ChatInputBar extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: 'Attach image',
                 onPressed: isSending ? null : onPickImage,
-                icon: const Icon(Icons.image_outlined),
+                icon: const FUI(BoldRounded.picture),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -846,7 +871,7 @@ class _ChatInputBar extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.send_rounded),
+                      : const FUI(BoldRounded.paperPlane),
                 ),
               ),
             ],
@@ -877,7 +902,7 @@ class _ComposerReplyPreview extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.reply_rounded, size: 18),
+          const FUI(BoldRounded.undo, width: 18, height: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -902,7 +927,7 @@ class _ComposerReplyPreview extends StatelessWidget {
           IconButton(
             tooltip: 'Cancel reply',
             onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
+            icon: const FUI(BoldRounded.cross),
           ),
         ],
       ),
@@ -928,7 +953,7 @@ class _ComposerImagePreview extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.image_outlined, size: 18),
+          const FUI(BoldRounded.picture, width: 18, height: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -941,7 +966,7 @@ class _ComposerImagePreview extends StatelessWidget {
           IconButton(
             tooltip: 'Remove image',
             onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
+            icon: const FUI(BoldRounded.cross),
           ),
         ],
       ),
@@ -1003,7 +1028,7 @@ class _DiscussionTab extends StatelessWidget {
         if (snapshot.hasError) {
           return FirestoreErrorState(
             error: snapshot.error!,
-            icon: Icons.question_answer_outlined,
+            icon: BoldRounded.comments,
             title: 'Discussions unavailable',
             fallbackMessage: 'Discussion threads are unavailable right now.',
           );
@@ -1011,7 +1036,7 @@ class _DiscussionTab extends StatelessWidget {
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
           return const EmptyState(
-            icon: Icons.question_answer_outlined,
+            icon: BoldRounded.comments,
             title: 'No discussions yet',
             message:
                 'Discussion threads from the existing collection will appear here.',
@@ -1059,7 +1084,7 @@ class _PostsTab extends StatelessWidget {
         if (snapshot.hasError) {
           return FirestoreErrorState(
             error: snapshot.error!,
-            icon: Icons.dynamic_feed_outlined,
+            icon: BoldRounded.megaphone,
             title: 'Posts unavailable',
             fallbackMessage: 'Community posts could not be loaded.',
           );
@@ -1067,7 +1092,7 @@ class _PostsTab extends StatelessWidget {
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
           return const EmptyState(
-            icon: Icons.dynamic_feed_outlined,
+            icon: BoldRounded.megaphone,
             title: 'No community posts yet',
             message:
                 'Campus posts from `posts` will appear here once they are available.',
@@ -1107,18 +1132,18 @@ class _DiscussionCard extends StatelessWidget {
                 _CommunityTag(
                   label: thread.category,
                   tone: scheme.primary,
-                  icon: Icons.sell_outlined,
+                  icon: BoldRounded.hastag,
                 ),
                 _CommunityTag(
                   label: '${thread.commentCount} replies',
                   tone: scheme.secondary,
-                  icon: Icons.mode_comment_outlined,
+                  icon: BoldRounded.comment,
                 ),
                 if (thread.isResolved)
                   _CommunityTag(
                     label: 'Resolved',
                     tone: scheme.tertiary,
-                    icon: Icons.verified_outlined,
+                    icon: BoldRounded.shieldCheck,
                   ),
               ],
             ),
@@ -1165,9 +1190,11 @@ class _PostCard extends StatelessWidget {
                     errorWidget: (_, _, _) => Container(
                       height: 188,
                       color: scheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
+                      child: FUI(
+                        BoldRounded.picture,
                         color: scheme.outline,
+                        width: 28,
+                        height: 28,
                       ),
                     ),
                   ),
@@ -1192,7 +1219,7 @@ class _PostCard extends StatelessWidget {
                   child: _CommunityTag(
                     label: post.category,
                     tone: Colors.white,
-                    icon: Icons.local_offer_outlined,
+                    icon: BoldRounded.hastag,
                     lightForeground: false,
                   ),
                 ),
@@ -1239,12 +1266,12 @@ class _PostCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _PostMeta(
-                      icon: Icons.favorite_border,
+                      icon: BoldRounded.heart,
                       label: '${post.likeCount}',
                       tone: scheme.primary,
                     ),
                     _PostMeta(
-                      icon: Icons.mode_comment_outlined,
+                      icon: BoldRounded.comment,
                       label: '${post.commentCount}',
                       tone: scheme.primary,
                     ),
@@ -1269,7 +1296,7 @@ class _CommunityTag extends StatelessWidget {
 
   final String label;
   final Color tone;
-  final IconData icon;
+  final String icon;
   final bool lightForeground;
 
   @override
@@ -1287,7 +1314,7 @@ class _CommunityTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: foreground),
+          FUI(icon, width: 14, height: 14, color: foreground),
           const SizedBox(width: 6),
           Text(
             label,
@@ -1308,7 +1335,7 @@ class _PostMeta extends StatelessWidget {
     required this.tone,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color tone;
 
@@ -1317,7 +1344,7 @@ class _PostMeta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: tone),
+        FUI(icon, width: 18, height: 18, color: tone),
         const SizedBox(width: 6),
         Text(label, style: Theme.of(context).textTheme.labelLarge),
       ],

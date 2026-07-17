@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 import '../../../core/utils/app_page_route.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -27,7 +28,7 @@ class GuildHubScreen extends StatelessWidget {
               title: 'Guild Hub',
               subtitle:
                   'Track verified student representation updates, common campus concerns, and the feedback themes that matter most.',
-              icon: Icons.groups_outlined,
+              icon: BoldRounded.user,
               scheme: scheme,
               badge: 'Verified voice',
               height: 220,
@@ -39,7 +40,7 @@ class GuildHubScreen extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 children: [
                   _GuildMetricCard(
-                    icon: Icons.verified_outlined,
+                    icon: BoldRounded.shieldCheck,
                     title: 'Trusted notices',
                     subtitle: 'Curated from verified resource flows',
                     width: 210,
@@ -47,7 +48,7 @@ class GuildHubScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   _GuildMetricCard(
-                    icon: Icons.campaign_outlined,
+                    icon: BoldRounded.megaphone,
                     title: 'Student feedback',
                     subtitle: 'Grouped into moderation-ready themes',
                     width: 224,
@@ -55,7 +56,7 @@ class GuildHubScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   _GuildMetricCard(
-                    icon: Icons.account_tree_outlined,
+                    icon: BoldRounded.network,
                     title: 'Cabinet structure',
                     subtitle: 'View leadership in a dedicated screen',
                     width: 224,
@@ -92,9 +93,11 @@ class GuildHubScreen extends StatelessWidget {
                             color: scheme.primary.withValues(alpha: 0.2),
                           ),
                         ),
-                        child: Icon(
-                          Icons.account_tree_outlined,
+                        child: FUI(
+                          BoldRounded.network,
                           color: scheme.primary,
+                          width: 22,
+                          height: 22,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -145,7 +148,11 @@ class GuildHubScreen extends StatelessWidget {
                       onPressed: () => Navigator.of(
                         context,
                       ).push(buildAppPageRoute(const GuildCabinetScreen())),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                      icon: const FUI(
+                        BoldRounded.arrowRight,
+                        width: 20,
+                        height: 20,
+                      ),
                       label: const Text('View full cabinet'),
                     ),
                   ),
@@ -170,7 +177,7 @@ class GuildHubScreen extends StatelessWidget {
                 if (snapshot.hasError) {
                   return FirestoreErrorState(
                     error: snapshot.error!,
-                    icon: Icons.groups_outlined,
+                    icon: BoldRounded.user,
                     title: 'Guild feed unavailable',
                     fallbackMessage:
                         'Guild updates could not be loaded right now.',
@@ -179,7 +186,7 @@ class GuildHubScreen extends StatelessWidget {
                 final updates = _buildUpdates(snapshot.data ?? []);
                 if (updates.isEmpty) {
                   return const EmptyState(
-                    icon: Icons.groups_outlined,
+                    icon: BoldRounded.user,
                     title: 'No guild updates yet',
                     message:
                         'Verified guild notices will appear here when published.',
@@ -238,7 +245,11 @@ class GuildHubScreen extends StatelessWidget {
                         Expanded(
                           child: FilledButton.icon(
                             onPressed: () {},
-                            icon: const Icon(Icons.rate_review_outlined),
+                            icon: const FUI(
+                              BoldRounded.comment,
+                              width: 18,
+                              height: 18,
+                            ),
                             label: const Text('Open feedback form'),
                           ),
                         ),
@@ -246,7 +257,11 @@ class GuildHubScreen extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {},
-                            icon: const Icon(Icons.shield_outlined),
+                            icon: const FUI(
+                              BoldRounded.shield,
+                              width: 18,
+                              height: 18,
+                            ),
                             label: const Text('Review themes'),
                           ),
                         ),
@@ -299,7 +314,7 @@ class _GuildMetricCard extends StatelessWidget {
     required this.gradientColors,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final double width;
@@ -330,7 +345,12 @@ class _GuildMetricCard extends StatelessWidget {
               CircleAvatar(
                 backgroundColor: gradientColors[0].withValues(alpha: 0.2),
                 radius: 18,
-                child: Icon(icon, color: gradientColors[0], size: 20),
+                child: FUI(
+                  icon,
+                  color: gradientColors[0],
+                  width: 20,
+                  height: 20,
+                ),
               ),
               const Spacer(),
               Text(
@@ -443,7 +463,12 @@ class _GuildInsightCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Icon(Icons.insights_outlined, color: scheme.primary),
+            FUI(
+              BoldRounded.magicWand,
+              color: scheme.primary,
+              width: 22,
+              height: 22,
+            ),
           ],
         ),
       ),
@@ -479,7 +504,12 @@ class _GuildUpdateCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.verified, size: 14, color: scheme.primary),
+                      FUI(
+                        SolidRounded.check,
+                        width: 14,
+                        height: 14,
+                        color: scheme.primary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         update.category,
@@ -491,9 +521,10 @@ class _GuildUpdateCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (update.isVerified)
-                  Icon(
-                    Icons.verified_user_outlined,
-                    size: 18,
+                  FUI(
+                    BoldRounded.shieldCheck,
+                    width: 18,
+                    height: 18,
                     color: scheme.secondary,
                   ),
               ],
@@ -505,7 +536,12 @@ class _GuildUpdateCard extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                Icon(Icons.campaign_outlined, size: 18, color: scheme.primary),
+                FUI(
+                  BoldRounded.megaphone,
+                  width: 18,
+                  height: 18,
+                  color: scheme.primary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'Verified update',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 class FeatureHeroBanner extends StatelessWidget {
   const FeatureHeroBanner({
@@ -15,7 +16,7 @@ class FeatureHeroBanner extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final Object icon;
   final ColorScheme scheme;
   final String? imageAsset;
   final String? badge;
@@ -70,8 +71,8 @@ class FeatureHeroBanner extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
@@ -79,7 +80,7 @@ class FeatureHeroBanner extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.24),
                           ),
                         ),
-                        child: Icon(icon, color: Colors.white),
+                        child: _HeroIcon(icon: icon),
                       ),
                       const SizedBox(width: 12),
                       if (badge != null)
@@ -127,5 +128,20 @@ class FeatureHeroBanner extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _HeroIcon extends StatelessWidget {
+  const _HeroIcon({required this.icon});
+
+  final Object icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = icon;
+    if (value is String) {
+      return FUI(value, color: Colors.white, width: 20, height: 20);
+    }
+    return Icon(value as IconData, color: Colors.white);
   }
 }

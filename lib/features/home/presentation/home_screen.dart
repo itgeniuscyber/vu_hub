@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -28,21 +29,21 @@ class HomeScreen extends StatelessWidget {
 
     final quickActions = [
       _QuickAction(
-        icon: Icons.auto_awesome,
+        icon: BoldRounded.magicWand,
         title: 'Ask VU AI',
         subtitle: 'Campus help, summaries, study support',
         color: scheme.primary,
         onTap: () => navigation.onSelectTab(3),
       ),
       _QuickAction(
-        icon: Icons.folder_copy,
+        icon: BoldRounded.folder,
         title: 'Past papers',
         subtitle: 'Open VU Vault resources',
         color: scheme.secondary,
         onTap: () => navigation.onSelectTab(2),
       ),
       _QuickAction(
-        icon: Icons.support_agent,
+        icon: BoldRounded.headset,
         title: 'Help desk',
         subtitle: 'Find the right office faster',
         color: const Color(0xFF22C55E),
@@ -86,21 +87,21 @@ class HomeScreen extends StatelessWidget {
                                 : 1.1,
                             children: [
                               _PremiumMetricCard(
-                                icon: Icons.campaign_outlined,
+                                icon: BoldRounded.megaphone,
                                 title: 'Feed',
                                 subtitle: 'Latest notices',
                                 color: scheme.primary,
                                 onTap: () => navigation.onSelectTab(1),
                               ),
                               _PremiumMetricCard(
-                                icon: Icons.event_available_outlined,
+                                icon: BoldRounded.calendar,
                                 title: 'Live',
                                 subtitle: 'Campus events',
                                 color: const Color(0xFFFBBF24),
                                 onTap: () => navigation.onSelectTab(4),
                               ),
                               _PremiumMetricCard(
-                                icon: Icons.chat_bubble_outline,
+                                icon: BoldRounded.comment,
                                 title: 'Chat',
                                 subtitle: 'Community room',
                                 color: scheme.secondary,
@@ -109,7 +110,7 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ),
                               _PremiumMetricCard(
-                                icon: Icons.question_answer_outlined,
+                                icon: BoldRounded.comments,
                                 title: 'Discussions',
                                 subtitle: 'Academic threads',
                                 color: const Color(0xFF8B5CF6),
@@ -120,7 +121,7 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ),
                               _PremiumMetricCard(
-                                icon: Icons.dynamic_feed_outlined,
+                                icon: BoldRounded.grid,
                                 title: 'Posts',
                                 subtitle: 'Campus moments',
                                 color: const Color(0xFFF97316),
@@ -236,7 +237,12 @@ class _PremiumHomeHeader extends StatelessWidget {
                         child: const CircleAvatar(
                           radius: 20,
                           backgroundColor: Colors.white24,
-                          child: Icon(Icons.person, color: Colors.white),
+                          child: FUI(
+                            SolidRounded.user,
+                            color: Colors.white,
+                            width: 20,
+                            height: 20,
+                          ),
                         ),
                       ),
                       // Notification Bell
@@ -250,9 +256,11 @@ class _PremiumHomeHeader extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_none,
+                        child: const FUI(
+                          RegularRounded.bell,
                           color: Colors.white,
+                          width: 18,
+                          height: 18,
                         ),
                       ),
                     ],
@@ -298,7 +306,7 @@ class _PremiumMetricCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -342,7 +350,7 @@ class _PremiumMetricCard extends StatelessWidget {
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: FUI(icon, color: color, width: 20, height: 20),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,19 +389,19 @@ class _StoryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 92,
+      height: 84,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: const [
           _StoryBubble(
             label: 'Live now',
-            icon: Icons.podcasts,
+            icon: BoldRounded.videoCamera,
             highlighted: true,
           ),
-          _StoryBubble(label: 'Guild', icon: Icons.groups_2_outlined),
-          _StoryBubble(label: 'Events', icon: Icons.celebration_outlined),
-          _StoryBubble(label: 'AI Tips', icon: Icons.auto_awesome),
-          _StoryBubble(label: 'Support', icon: Icons.support_agent),
+          _StoryBubble(label: 'Guild', icon: BoldRounded.user),
+          _StoryBubble(label: 'Events', icon: BoldRounded.calendar),
+          _StoryBubble(label: 'AI Tips', icon: BoldRounded.magicWand),
+          _StoryBubble(label: 'Support', icon: BoldRounded.headset),
         ],
       ),
     );
@@ -408,7 +416,7 @@ class _StoryBubble extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final String icon;
   final bool highlighted;
 
   @override
@@ -419,8 +427,8 @@ class _StoryBubble extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 62,
-            height: 62,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: highlighted
@@ -444,9 +452,11 @@ class _StoryBubble extends StatelessWidget {
                     ? Colors.white.withValues(alpha: 0.12)
                     : scheme.surface,
               ),
-              child: Icon(
+              child: FUI(
                 icon,
                 color: highlighted ? Colors.white : scheme.primary,
+                width: 20,
+                height: 20,
               ),
             ),
           ),
@@ -467,7 +477,7 @@ class _QuickAction extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final Color color;
@@ -490,7 +500,7 @@ class _QuickAction extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   color: color.withValues(alpha: 0.14),
                 ),
-                child: Icon(icon, color: color),
+                child: FUI(icon, color: color, width: 20, height: 20),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -510,7 +520,12 @@ class _QuickAction extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: color.withValues(alpha: 0.12),
                 ),
-                child: Icon(Icons.chevron_right, color: color),
+                child: FUI(
+                  BoldRounded.arrowSmallRight,
+                  color: color,
+                  width: 18,
+                  height: 18,
+                ),
               ),
             ],
           ),
@@ -580,11 +595,12 @@ class _DashboardEventCard extends StatelessWidget {
                 Row(
                   children: [
                     Chip(
-                      avatar: Icon(
+                      avatar: FUI(
                         event.status == CampusEventStatus.live
-                            ? Icons.circle
-                            : Icons.schedule,
-                        size: 16,
+                            ? SolidRounded.circle
+                            : RegularRounded.clock,
+                        width: 14,
+                        height: 14,
                       ),
                       label: Text(
                         event.status == CampusEventStatus.live
@@ -616,11 +632,19 @@ class _DashboardEventCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     Chip(
-                      avatar: const Icon(Icons.place_outlined, size: 16),
+                      avatar: const FUI(
+                        RegularRounded.map,
+                        width: 16,
+                        height: 16,
+                      ),
                       label: Text(event.location),
                     ),
                     Chip(
-                      avatar: const Icon(Icons.event, size: 16),
+                      avatar: const FUI(
+                        RegularRounded.calendar,
+                        width: 16,
+                        height: 16,
+                      ),
                       label: Text(
                         event.startTime == null
                             ? 'Date TBC'
@@ -684,7 +708,12 @@ class _DashboardAnnouncementCard extends StatelessWidget {
                     Chip(label: Text(item.category)),
                     const Spacer(),
                     if (item.isPinned)
-                      Icon(Icons.push_pin, color: scheme.primary, size: 18),
+                      FUI(
+                        BoldRounded.bookmark,
+                        color: scheme.primary,
+                        width: 18,
+                        height: 18,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -726,7 +755,12 @@ class _CampusPulseCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.insights, color: scheme.primary),
+                FUI(
+                  BoldRounded.magicWand,
+                  color: scheme.primary,
+                  width: 21,
+                  height: 21,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Campus pulse',

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -74,7 +75,7 @@ class _VuLiveScreenState extends State<VuLiveScreen> {
             if (snapshot.hasError) {
               return FirestoreErrorState(
                 error: snapshot.error!,
-                icon: Icons.live_tv_outlined,
+                icon: BoldRounded.videoCamera,
                 title: 'Events unavailable',
                 fallbackMessage: 'Campus events could not be loaded right now.',
               );
@@ -84,7 +85,7 @@ class _VuLiveScreenState extends State<VuLiveScreen> {
               return Container(
                 color: Theme.of(context).colorScheme.surface,
                 child: const EmptyState(
-                  icon: Icons.event_busy_outlined,
+                  icon: BoldRounded.calendar,
                   title: 'No campus live streams yet',
                   message:
                       'Live streams from the events collection will appear here.',
@@ -151,7 +152,7 @@ class _VuLiveScreenState extends State<VuLiveScreen> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () => Navigator.maybePop(context),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const FUI(BoldRounded.arrowLeft),
                   ),
                 ),
                 Positioned(
@@ -586,10 +587,11 @@ class _LivePostMediaBackgroundState extends State<_LivePostMediaBackground> {
                       color: Colors.white.withValues(alpha: 0.22),
                     ),
                   ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
+                  child: const FUI(
+                    BoldRounded.play,
                     color: Colors.white,
-                    size: 44,
+                    width: 36,
+                    height: 36,
                   ),
                 ),
               ),
@@ -673,7 +675,7 @@ class _LiveTopBar extends StatelessWidget {
               ? null
               : CachedNetworkImageProvider(event.hostAvatarUrl!),
           child: event.hostAvatarUrl == null || event.hostAvatarUrl!.isEmpty
-              ? const Icon(Icons.school_rounded, color: Colors.white)
+              ? const FUI(BoldRounded.school, color: Colors.white)
               : null,
         ),
         const SizedBox(width: 10),
@@ -710,12 +712,12 @@ class _LiveTopBar extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _LiveGlassChip(
-          icon: Icons.visibility_outlined,
+          icon: BoldRounded.eye,
           label: _formatCount(visibleViews),
         ),
         const SizedBox(width: 8),
         _LiveGlassChip(
-          icon: live ? Icons.radio_button_checked : Icons.schedule_outlined,
+          icon: live ? SolidRounded.circle : BoldRounded.clock,
           label: live ? 'Live' : _livePostDateLabel(event),
           color: live ? const Color(0xFFFF2D55) : Colors.white,
         ),
@@ -764,12 +766,12 @@ class _LiveInfoPanel extends StatelessWidget {
           children: [
             _Pill(
               label: event.location,
-              icon: Icons.place_outlined,
+              icon: BoldRounded.mapMarker,
               maxWidth: 190,
             ),
             _Pill(
               label: _livePostDateLabel(event),
-              icon: Icons.schedule,
+              icon: BoldRounded.clock,
               maxWidth: 160,
             ),
           ],
@@ -782,12 +784,14 @@ class _LiveInfoPanel extends StatelessWidget {
             foregroundColor: live ? Colors.white : Colors.black,
             minimumSize: const Size(0, 44),
           ),
-          icon: Icon(
+          icon: FUI(
             event.isRealtimeRoom
-                ? Icons.videocam_rounded
+                ? BoldRounded.videoCamera
                 : live
-                ? Icons.play_arrow_rounded
-                : Icons.open_in_new_rounded,
+                ? BoldRounded.play
+                : BoldRounded.link,
+            width: 18,
+            height: 18,
           ),
           label: Text(
             event.isRealtimeRoom
@@ -826,7 +830,7 @@ class _LiveActionRail extends StatelessWidget {
       children: [
         if (onCreate != null) ...[
           _RoundLiveAction(
-            icon: Icons.add_box_rounded,
+            icon: BoldRounded.add,
             label: 'Create',
             color: const Color(0xFFFF2D55),
             onTap: onCreate!,
@@ -834,7 +838,7 @@ class _LiveActionRail extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         _RoundLiveAction(
-          icon: Icons.favorite_rounded,
+          icon: BoldRounded.heart,
           label: _formatCount(likeCount),
           color: const Color(0xFFFF2D55),
           onTap: onLike,
@@ -843,7 +847,7 @@ class _LiveActionRail extends StatelessWidget {
         _GiftMenu(giftCount: giftCount, onGift: onGift),
         const SizedBox(height: 14),
         _RoundLiveAction(
-          icon: Icons.share_rounded,
+          icon: BoldRounded.share,
           label: 'Share',
           color: Colors.white,
           onTap: onShare,
@@ -876,7 +880,7 @@ class _GiftMenu extends StatelessWidget {
           )
           .toList(),
       child: _RoundLiveActionShell(
-        icon: Icons.card_giftcard_rounded,
+        icon: BoldRounded.gift,
         label: _formatCount(giftCount),
         color: const Color(0xFFFFC857),
       ),
@@ -892,7 +896,7 @@ class _RoundLiveAction extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
@@ -914,7 +918,7 @@ class _RoundLiveActionShell extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color color;
 
@@ -923,14 +927,14 @@ class _RoundLiveActionShell extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.black.withValues(alpha: 0.32),
             border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
           ),
-          child: Icon(icon, color: color),
+          child: FUI(icon, color: color, width: 20, height: 20),
         ),
         const SizedBox(height: 4),
         Text(
@@ -1077,7 +1081,7 @@ class _LiveComposer extends StatelessWidget {
             backgroundColor: const Color(0xFFEC3BCE),
             foregroundColor: Colors.white,
           ),
-          icon: const Icon(Icons.send_rounded),
+          icon: const FUI(BoldRounded.paperPlane, width: 20, height: 20),
         ),
       ],
     );
@@ -1091,7 +1095,7 @@ class _LiveGlassChip extends StatelessWidget {
     this.color = Colors.white,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color color;
 
@@ -1106,7 +1110,7 @@ class _LiveGlassChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 15),
+          FUI(icon, color: color, width: 15, height: 15),
           const SizedBox(width: 5),
           Text(
             label,
@@ -1130,10 +1134,7 @@ class _LiveProgressBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _LiveGlassChip(
-      icon: Icons.swap_vert_rounded,
-      label: '$current/$total',
-    );
+    return _LiveGlassChip(icon: BoldRounded.arrowUp, label: '$current/$total');
   }
 }
 
@@ -1354,17 +1355,17 @@ class _StartLiveSheetState extends State<_StartLiveSheet> {
               segments: const [
                 ButtonSegment(
                   value: _LiveCreateMode.external,
-                  icon: Icon(Icons.link_rounded),
+                  icon: FUI(BoldRounded.link),
                   label: Text('Link'),
                 ),
                 ButtonSegment(
                   value: _LiveCreateMode.shortVideo,
-                  icon: Icon(Icons.video_library_outlined),
+                  icon: FUI(BoldRounded.play),
                   label: Text('Video'),
                 ),
                 ButtonSegment(
                   value: _LiveCreateMode.camera,
-                  icon: Icon(Icons.videocam_outlined),
+                  icon: FUI(BoldRounded.videoCamera),
                   label: Text('Camera'),
                 ),
               ],
@@ -1386,7 +1387,7 @@ class _StartLiveSheetState extends State<_StartLiveSheet> {
               ),
             if (_mode == _LiveCreateMode.shortVideo)
               _PickedFileButton(
-                icon: Icons.video_file_outlined,
+                icon: BoldRounded.file,
                 label: _videoFile == null
                     ? 'Choose short video'
                     : '${_videoFile!.name} • ${_formatFileSize(_videoFile!.size)}',
@@ -1418,7 +1419,7 @@ class _StartLiveSheetState extends State<_StartLiveSheet> {
               )
             else if (_mode == _LiveCreateMode.shortVideo)
               _PickedFileButton(
-                icon: Icons.image_outlined,
+                icon: BoldRounded.picture,
                 label: _coverFile?.name ?? 'Choose optional cover image',
                 onPressed: _pickCover,
               ),
@@ -1439,7 +1440,7 @@ class _StartLiveSheetState extends State<_StartLiveSheet> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: _cancelUpload,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const FUI(BoldRounded.cross),
                   label: const Text('Cancel upload'),
                 ),
               ),
@@ -1455,10 +1456,12 @@ class _StartLiveSheetState extends State<_StartLiveSheet> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(
+                    : FUI(
                         _mode == _LiveCreateMode.shortVideo
-                            ? Icons.upload_rounded
-                            : Icons.podcasts_rounded,
+                            ? BoldRounded.upload
+                            : BoldRounded.videoCamera,
+                        width: 18,
+                        height: 18,
                       ),
                 label: Text(
                   _mode == _LiveCreateMode.shortVideo
@@ -1495,7 +1498,7 @@ class _PickedFileButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final VoidCallback onPressed;
 
@@ -1503,7 +1506,7 @@ class _PickedFileButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon),
+      icon: FUI(icon, width: 18, height: 18),
       label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft),
     );
@@ -1525,7 +1528,12 @@ class _ProviderNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.videocam_outlined, color: scheme.primary),
+          FUI(
+            BoldRounded.videoCamera,
+            color: scheme.primary,
+            width: 22,
+            height: 22,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -1601,15 +1609,18 @@ class _LiveHeroCard extends StatelessWidget {
                             ? 'Featured'
                             : 'Next big event',
                         icon: event.status == CampusEventStatus.live
-                            ? Icons.podcasts
-                            : Icons.auto_awesome,
+                            ? BoldRounded.videoCamera
+                            : BoldRounded.magicWand,
                         pulse: event.status == CampusEventStatus.live,
                       ),
                       _GlassBadge(
                         label: event.category,
-                        icon: Icons.sell_outlined,
+                        icon: BoldRounded.hastag,
                       ),
-                      _GlassBadge(label: '$liveCount live', icon: Icons.bolt),
+                      _GlassBadge(
+                        label: '$liveCount live',
+                        icon: BoldRounded.videoCamera,
+                      ),
                     ],
                   ),
                   const Spacer(),
@@ -1646,12 +1657,12 @@ class _LiveHeroCard extends StatelessWidget {
                     children: [
                       _Pill(
                         label: _dateLabel(event, short: false),
-                        icon: Icons.schedule,
+                        icon: BoldRounded.clock,
                         maxWidth: 150,
                       ),
                       _Pill(
                         label: event.location,
-                        icon: Icons.location_on_outlined,
+                        icon: BoldRounded.mapMarker,
                         maxWidth: 180,
                       ),
                     ],
@@ -1669,10 +1680,12 @@ class _LiveHeroCard extends StatelessWidget {
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 42),
                           ),
-                          icon: Icon(
+                          icon: FUI(
                             event.status == CampusEventStatus.live
-                                ? Icons.live_tv
-                                : Icons.open_in_new,
+                                ? BoldRounded.videoCamera
+                                : BoldRounded.link,
+                            width: 18,
+                            height: 18,
                           ),
                           label: Text(
                             event.status == CampusEventStatus.live
@@ -1684,7 +1697,7 @@ class _LiveHeroCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       IconButton.filledTonal(
                         onPressed: () {},
-                        icon: const Icon(Icons.notifications_active_outlined),
+                        icon: const FUI(BoldRounded.bellRing),
                       ),
                     ],
                   ),
@@ -1717,7 +1730,7 @@ class _InsightStrip extends StatelessWidget {
       children: [
         Expanded(
           child: _InsightCard(
-            icon: Icons.radio_button_checked,
+            icon: SolidRounded.circle,
             label: 'Live',
             value: '$liveCount',
             color: const Color(0xFFEF4444),
@@ -1726,7 +1739,7 @@ class _InsightStrip extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _InsightCard(
-            icon: Icons.upcoming,
+            icon: BoldRounded.calendar,
             label: 'Upcoming',
             value: '$upcomingCount',
             color: scheme.primary,
@@ -1735,7 +1748,7 @@ class _InsightStrip extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _InsightCard(
-            icon: Icons.celebration_outlined,
+            icon: BoldRounded.confetti,
             label: 'Completed',
             value: '$completedCount',
             color: scheme.tertiary,
@@ -1754,7 +1767,7 @@ class _InsightCard extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final String value;
   final Color color;
@@ -1770,7 +1783,7 @@ class _InsightCard extends StatelessWidget {
             CircleAvatar(
               radius: 18,
               backgroundColor: color.withValues(alpha: 0.14),
-              child: Icon(icon, color: color, size: 18),
+              child: FUI(icon, color: color, width: 18, height: 18),
             ),
             const SizedBox(height: 10),
             Text(value, style: Theme.of(context).textTheme.titleMedium),
@@ -1887,9 +1900,11 @@ class _EventSection extends StatelessWidget {
                   backgroundColor: Theme.of(
                     context,
                   ).colorScheme.primary.withValues(alpha: 0.12),
-                  child: Icon(
-                    Icons.event_busy_outlined,
+                  child: FUI(
+                    BoldRounded.calendar,
                     color: Theme.of(context).colorScheme.primary,
+                    width: 22,
+                    height: 22,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1970,8 +1985,8 @@ class _EventTile extends StatelessWidget {
                 child: _GlassBadge(
                   label: label,
                   icon: event.status == CampusEventStatus.live
-                      ? Icons.podcasts
-                      : Icons.schedule,
+                      ? BoldRounded.videoCamera
+                      : BoldRounded.clock,
                   pulse: event.status == CampusEventStatus.live,
                 ),
               ),
@@ -1980,7 +1995,7 @@ class _EventTile extends StatelessWidget {
                 top: 14,
                 child: _GlassBadge(
                   label: event.category,
-                  icon: Icons.sell_outlined,
+                  icon: BoldRounded.hastag,
                 ),
               ),
               Positioned(
@@ -2020,12 +2035,12 @@ class _EventTile extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _SoftMetaPill(
-                      icon: Icons.schedule,
+                      icon: BoldRounded.clock,
                       label: _dateLabel(event, short: true),
                       maxWidth: 150,
                     ),
                     _SoftMetaPill(
-                      icon: Icons.place_outlined,
+                      icon: BoldRounded.mapMarker,
                       label: event.location,
                       maxWidth: 210,
                     ),
@@ -2040,10 +2055,12 @@ class _EventTile extends StatelessWidget {
                             event.streamUrl == null || event.streamUrl!.isEmpty
                             ? null
                             : _openStream,
-                        icon: Icon(
+                        icon: FUI(
                           event.status == CampusEventStatus.live
-                              ? Icons.live_tv
-                              : Icons.open_in_new,
+                              ? BoldRounded.videoCamera
+                              : BoldRounded.link,
+                          width: 18,
+                          height: 18,
                         ),
                         label: Text(
                           event.status == CampusEventStatus.live
@@ -2055,7 +2072,7 @@ class _EventTile extends StatelessWidget {
                     const SizedBox(width: 10),
                     IconButton.filledTonal(
                       onPressed: () {},
-                      icon: const Icon(Icons.notifications_active_outlined),
+                      icon: const FUI(BoldRounded.bellRing),
                     ),
                   ],
                 ),
@@ -2108,7 +2125,7 @@ class _CompactEventTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   _SoftMetaPill(
-                    icon: Icons.schedule,
+                    icon: BoldRounded.clock,
                     label: _dateLabel(event, short: true),
                     maxWidth: 140,
                   ),
@@ -2166,7 +2183,7 @@ class _StreamCard extends StatelessWidget {
               children: [
                 _GlassBadge(
                   label: live ? 'Streaming' : 'Showcase',
-                  icon: live ? Icons.podcasts : Icons.live_tv_outlined,
+                  icon: live ? BoldRounded.videoCamera : BoldRounded.play,
                   pulse: live,
                 ),
                 const Spacer(),
@@ -2199,8 +2216,10 @@ class _StreamCard extends StatelessWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: scheme.primary,
                     ),
-                    icon: Icon(
-                      live ? Icons.play_arrow_rounded : Icons.open_in_new,
+                    icon: FUI(
+                      live ? BoldRounded.play : BoldRounded.link,
+                      width: 18,
+                      height: 18,
                     ),
                     label: Text(live ? 'Watch now' : 'Preview stream'),
                   ),
@@ -2218,7 +2237,7 @@ class _Pill extends StatelessWidget {
   const _Pill({required this.label, required this.icon, this.maxWidth = 180});
 
   final String label;
-  final IconData icon;
+  final String icon;
   final double maxWidth;
 
   @override
@@ -2234,7 +2253,7 @@ class _Pill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Colors.white),
+            FUI(icon, width: 16, height: 16, color: Colors.white),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -2258,7 +2277,7 @@ class _SoftMetaPill extends StatelessWidget {
     this.maxWidth = 180,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final double maxWidth;
 
@@ -2276,7 +2295,7 @@ class _SoftMetaPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: scheme.primary),
+            FUI(icon, width: 16, height: 16, color: scheme.primary),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -2301,7 +2320,7 @@ class _GlassBadge extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final String icon;
   final bool pulse;
 
   @override
@@ -2316,7 +2335,7 @@ class _GlassBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 16),
+          FUI(icon, color: Colors.white, width: 16, height: 16),
           const SizedBox(width: 8),
           Text(
             label,

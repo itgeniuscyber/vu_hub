@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'dart:ui';
 
 import '../../ai_desk/presentation/ai_desk_screen.dart';
@@ -55,16 +56,21 @@ class _AppShellState extends State<AppShell> {
                     labelType: NavigationRailLabelType.all,
                     leading: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Icon(
-                        Icons.school,
+                      child: FUI(
+                        SolidRounded.school,
                         color: Theme.of(context).colorScheme.primary,
+                        width: 26,
+                        height: 26,
                       ),
                     ),
                     destinations: destinations
                         .map(
                           (item) => NavigationRailDestination(
-                            icon: Icon(item.icon),
-                            selectedIcon: Icon(item.selectedIcon),
+                            icon: FUI(item.icon),
+                            selectedIcon: FUI(
+                              item.selectedIcon,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             label: Text(item.label),
                           ),
                         )
@@ -109,28 +115,28 @@ class _AppShellState extends State<AppShell> {
 
 const _destinations = [
   _ShellDestination(
-    icon: Icons.dashboard_outlined,
-    selectedIcon: Icons.dashboard,
+    icon: RegularRounded.home,
+    selectedIcon: SolidRounded.home,
     label: 'Home',
   ),
   _ShellDestination(
-    icon: Icons.campaign_outlined,
-    selectedIcon: Icons.campaign,
+    icon: RegularRounded.megaphone,
+    selectedIcon: SolidRounded.megaphone,
     label: 'Feed',
   ),
   _ShellDestination(
-    icon: Icons.folder_copy_outlined,
-    selectedIcon: Icons.folder_copy,
+    icon: RegularRounded.folder,
+    selectedIcon: SolidRounded.folder,
     label: 'Vault',
   ),
   _ShellDestination(
-    icon: Icons.auto_awesome_outlined,
-    selectedIcon: Icons.auto_awesome,
+    icon: RegularRounded.magicWand,
+    selectedIcon: SolidRounded.magicWand,
     label: 'AI',
   ),
   _ShellDestination(
-    icon: Icons.apps_outlined,
-    selectedIcon: Icons.apps,
+    icon: RegularRounded.apps,
+    selectedIcon: SolidRounded.apps,
     label: 'More',
   ),
 ];
@@ -142,8 +148,8 @@ class _ShellDestination {
     required this.label,
   });
 
-  final IconData icon;
-  final IconData selectedIcon;
+  final String icon;
+  final String selectedIcon;
   final String label;
 }
 
@@ -214,11 +220,13 @@ class _FloatingBottomBar extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          FUI(
                             selected ? item.selectedIcon : item.icon,
                             color: selected
                                 ? scheme.primary
                                 : scheme.onSurface.withValues(alpha: 0.72),
+                            width: 24,
+                            height: 24,
                           ),
                           const SizedBox(height: 4),
                           Text(

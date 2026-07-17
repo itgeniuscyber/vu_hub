@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'dart:ui';
 
 import '../data/ai_service.dart';
@@ -95,7 +96,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                               _AiToolCard(
                                 title: 'Smart search',
                                 subtitle: 'Find notices, events, and resources',
-                                icon: Icons.travel_explore,
+                                icon: BoldRounded.map,
                                 color: scheme.primary,
                                 onTap: () => _send(
                                   'Search campus help for exam timetable and latest notices',
@@ -105,7 +106,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                                 title: 'Study assist',
                                 subtitle:
                                     'Summaries, flashcards, revision help',
-                                icon: Icons.menu_book_outlined,
+                                icon: BoldRounded.book,
                                 color: scheme.secondary,
                                 onTap: () => _send(
                                   'Create revision questions from a past paper',
@@ -114,7 +115,7 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                               _AiToolCard(
                                 title: 'Route me',
                                 subtitle: 'Find the right office or process',
-                                icon: Icons.hub_outlined,
+                                icon: BoldRounded.network,
                                 color: const Color(0xFF8B5CF6),
                                 onTap: () => _send(
                                   'Where should I go for retake applications?',
@@ -230,12 +231,14 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                             ),
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 220),
-                              child: Icon(
+                              child: FUI(
                                 _isThinking
-                                    ? Icons.more_horiz
-                                    : Icons.arrow_upward_rounded,
+                                    ? BoldRounded.menuDots
+                                    : BoldRounded.arrowUp,
                                 key: ValueKey(_isThinking),
                                 color: scheme.onPrimary,
+                                width: 22,
+                                height: 22,
                               ),
                             ),
                           ),
@@ -292,10 +295,11 @@ class _AiHeader extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.36),
                       ),
                     ),
-                    child: const Icon(
-                      Icons.psychology,
+                    child: const FUI(
+                      BoldRounded.headSideThinking,
                       color: Colors.white,
-                      size: 32,
+                      width: 28,
+                      height: 28,
                     ),
                   )
                   .animate(
@@ -400,9 +404,10 @@ class _QuickPrompt extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: ActionChip(
-        avatar: Icon(
-          Icons.auto_awesome,
-          size: 16,
+        avatar: FUI(
+          BoldRounded.magicWand,
+          width: 16,
+          height: 16,
           color: Theme.of(context).colorScheme.primary,
         ),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -433,7 +438,7 @@ class _AiToolCard extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String icon;
   final Color color;
   final VoidCallback onTap;
 
@@ -466,7 +471,7 @@ class _AiToolCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: color.withValues(alpha: 0.2),
-                  child: Icon(icon, color: color),
+                  child: FUI(icon, color: color, width: 18, height: 18),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -557,9 +562,10 @@ class _MessageBubble extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.verified,
-                              size: 14,
+                            FUI(
+                              SolidRounded.check,
+                              width: 14,
+                              height: 14,
                               color: scheme.primary,
                             ),
                             const SizedBox(width: 6),

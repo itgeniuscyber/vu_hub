@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 class MetricCard extends StatelessWidget {
   const MetricCard({
@@ -9,7 +10,7 @@ class MetricCard extends StatelessWidget {
     required this.color,
   });
 
-  final IconData icon;
+  final Object icon;
   final String label;
   final String value;
   final Color color;
@@ -22,7 +23,7 @@ class MetricCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color),
+            _MetricIcon(icon: icon, color: color),
             const Spacer(),
             Text(value, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
@@ -31,5 +32,21 @@ class MetricCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _MetricIcon extends StatelessWidget {
+  const _MetricIcon({required this.icon, required this.color});
+
+  final Object icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = icon;
+    if (value is String) {
+      return FUI(value, color: color, width: 24, height: 24);
+    }
+    return Icon(value as IconData, color: color);
   }
 }

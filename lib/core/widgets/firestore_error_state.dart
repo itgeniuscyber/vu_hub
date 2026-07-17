@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 import '../utils/firestore_error_message.dart';
 import 'empty_state.dart';
@@ -8,13 +9,13 @@ class FirestoreErrorState extends StatelessWidget {
     super.key,
     required this.error,
     this.title = 'Could not load content',
-    this.icon = Icons.cloud_off_outlined,
+    this.icon = BoldRounded.cloudDisabled,
     this.fallbackMessage = 'Please try again in a moment.',
   });
 
   final Object error;
   final String title;
-  final IconData icon;
+  final Object icon;
   final String fallbackMessage;
 
   @override

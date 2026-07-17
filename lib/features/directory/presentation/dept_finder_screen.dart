@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/widgets/empty_state.dart';
@@ -51,7 +52,7 @@ class _DeptFinderScreenState extends State<DeptFinderScreen> {
                     title: 'Dept Finder',
                     subtitle:
                         'Search departments, offices, lecturers, and support staff without leaving the app.',
-                    icon: Icons.location_city_outlined,
+                    icon: BoldRounded.building,
                     scheme: scheme,
                     badge: 'Campus routing',
                     height: 188,
@@ -63,21 +64,21 @@ class _DeptFinderScreenState extends State<DeptFinderScreen> {
                       scrollDirection: Axis.horizontal,
                       children: const [
                         _DirectoryMetricCard(
-                          icon: Icons.support_agent_outlined,
+                          icon: BoldRounded.headset,
                           title: 'Support offices',
                           subtitle: 'Registry, ICT, Finance',
                           width: 194,
                         ),
                         SizedBox(width: 12),
                         _DirectoryMetricCard(
-                          icon: Icons.school_outlined,
+                          icon: BoldRounded.school,
                           title: 'Academic contacts',
                           subtitle: 'Lecturers and departments',
                           width: 218,
                         ),
                         SizedBox(width: 12),
                         _DirectoryMetricCard(
-                          icon: Icons.route_outlined,
+                          icon: BoldRounded.map,
                           title: 'Quick routing',
                           subtitle: 'Search by role or keyword',
                           width: 188,
@@ -126,7 +127,7 @@ class _DeptFinderScreenState extends State<DeptFinderScreen> {
                       if (snapshot.hasError) {
                         return FirestoreErrorState(
                           error: snapshot.error!,
-                          icon: Icons.location_city_outlined,
+                          icon: BoldRounded.building,
                           title: 'Directory unavailable',
                           fallbackMessage:
                               'Departments and office contacts could not be loaded.',
@@ -151,7 +152,7 @@ class _DeptFinderScreenState extends State<DeptFinderScreen> {
                             const SizedBox(
                               height: 320,
                               child: EmptyState(
-                                icon: Icons.search_off,
+                                icon: BoldRounded.search,
                                 title: 'No matching departments',
                                 message:
                                     'Try a broader search like finance, support, registry, retake, or ICT.',
@@ -293,7 +294,12 @@ class _FinderHero extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: scheme.primary.withValues(alpha: 0.14),
-            child: Icon(Icons.hub_outlined, color: scheme.primary),
+            child: FUI(
+              BoldRounded.network,
+              color: scheme.primary,
+              width: 22,
+              height: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -315,19 +321,19 @@ class _FinderHero extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _RoutingTag(
-                      icon: Icons.account_balance_outlined,
+                      icon: BoldRounded.building,
                       label: 'Registry',
                       tone: scheme.primary,
                       onTap: () => onRouteTap('retake'),
                     ),
                     _RoutingTag(
-                      icon: Icons.payments_outlined,
+                      icon: BoldRounded.money,
                       label: 'Finance',
                       tone: scheme.secondary,
                       onTap: () => onRouteTap('fees'),
                     ),
                     _RoutingTag(
-                      icon: Icons.memory_outlined,
+                      icon: BoldRounded.computer,
                       label: 'ICT',
                       tone: scheme.tertiary,
                       onTap: () => onRouteTap('vclass'),
@@ -351,7 +357,7 @@ class _DirectoryMetricCard extends StatelessWidget {
     required this.width,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final double width;
@@ -367,7 +373,7 @@ class _DirectoryMetricCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: scheme.primary),
+              FUI(icon, color: scheme.primary, width: 22, height: 22),
               const Spacer(),
               Text(title, style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 4),
@@ -420,15 +426,33 @@ class _DirectorySearchBar extends StatelessWidget {
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: 'Search by office, role, keyword, or email',
-          prefixIcon: Icon(Icons.search, color: scheme.primary),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.all(13),
+            child: FUI(
+              BoldRounded.search,
+              color: scheme.primary,
+              width: 20,
+              height: 20,
+            ),
+          ),
           suffixIcon: query.isEmpty
-              ? Icon(
-                  Icons.travel_explore_outlined,
-                  color: scheme.onSurfaceVariant,
+              ? Padding(
+                  padding: const EdgeInsets.all(13),
+                  child: FUI(
+                    BoldRounded.map,
+                    color: scheme.onSurfaceVariant,
+                    width: 20,
+                    height: 20,
+                  ),
                 )
               : IconButton(
                   onPressed: onClear,
-                  icon: Icon(Icons.close_rounded, color: scheme.primary),
+                  icon: FUI(
+                    BoldRounded.cross,
+                    color: scheme.primary,
+                    width: 20,
+                    height: 20,
+                  ),
                 ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(24),
@@ -459,12 +483,12 @@ class _ProblemShortcutStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final items = [
-      _ShortcutQuery('Retake', 'retake', Icons.assignment_return_outlined),
-      _ShortcutQuery('Fees', 'fees', Icons.payments_outlined),
-      _ShortcutQuery('VClass', 'vclass', Icons.computer_outlined),
-      _ShortcutQuery('Wi-Fi', 'wifi', Icons.wifi_outlined),
-      _ShortcutQuery('Lecturer', 'lecturer', Icons.school_outlined),
-      _ShortcutQuery('Support', 'support', Icons.volunteer_activism_outlined),
+      _ShortcutQuery('Retake', 'retake', BoldRounded.receipt),
+      _ShortcutQuery('Fees', 'fees', BoldRounded.money),
+      _ShortcutQuery('VClass', 'vclass', BoldRounded.computer),
+      _ShortcutQuery('Wi-Fi', 'wifi', BoldRounded.wifiAlt),
+      _ShortcutQuery('Lecturer', 'lecturer', BoldRounded.school),
+      _ShortcutQuery('Support', 'support', BoldRounded.headset),
     ];
 
     return SizedBox(
@@ -476,7 +500,12 @@ class _ProblemShortcutStrip extends StatelessWidget {
         itemBuilder: (context, index) {
           final item = items[index];
           return ActionChip(
-            avatar: Icon(item.icon, size: 17, color: scheme.primary),
+            avatar: FUI(
+              item.icon,
+              width: 17,
+              height: 17,
+              color: scheme.primary,
+            ),
             label: Text(item.label),
             onPressed: () => onSelected(item.query),
           );
@@ -491,7 +520,7 @@ class _ShortcutQuery {
 
   final String label;
   final String query;
-  final IconData icon;
+  final String icon;
 }
 
 class _RouteFilterBar extends StatelessWidget {
@@ -517,7 +546,7 @@ class _RouteFilterBar extends StatelessWidget {
           final route = routes[index];
           return FilterChip(
             selected: selectedRoute == route,
-            avatar: Icon(_routeIcon(route), size: 16),
+            avatar: FUI(_routeIcon(route), width: 16, height: 16),
             label: Text(route),
             onSelected: (_) => onSelected(route),
           );
@@ -535,7 +564,7 @@ class _RoutingTag extends StatelessWidget {
     this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color tone;
   final VoidCallback? onTap;
@@ -554,7 +583,7 @@ class _RoutingTag extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: tone),
+            FUI(icon, width: 14, height: 14, color: tone),
             const SizedBox(width: 6),
             Text(
               label,
@@ -569,22 +598,22 @@ class _RoutingTag extends StatelessWidget {
   }
 }
 
-IconData _routeIcon(String route) {
+String _routeIcon(String route) {
   switch (route.toLowerCase()) {
     case 'academic':
-      return Icons.school_outlined;
+      return BoldRounded.school;
     case 'digital':
-      return Icons.memory_outlined;
+      return BoldRounded.computer;
     case 'faculty':
-      return Icons.apartment_outlined;
+      return BoldRounded.building;
     case 'finance':
-      return Icons.payments_outlined;
+      return BoldRounded.money;
     case 'support':
-      return Icons.support_agent_outlined;
+      return BoldRounded.headset;
     case 'all':
-      return Icons.all_inclusive;
+      return BoldRounded.apps;
     default:
-      return Icons.location_city_outlined;
+      return BoldRounded.building;
   }
 }
 
@@ -632,7 +661,12 @@ class _DirectoryCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: tone.withValues(alpha: 0.14),
-                    child: Icon(_routeIcon(entry.routeLabel), color: tone),
+                    child: FUI(
+                      _routeIcon(entry.routeLabel),
+                      color: tone,
+                      width: 22,
+                      height: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -669,12 +703,20 @@ class _DirectoryCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   Chip(
-                    avatar: const Icon(Icons.location_on_outlined, size: 16),
+                    avatar: const FUI(
+                      BoldRounded.mapMarker,
+                      width: 16,
+                      height: 16,
+                    ),
                     label: Text(entry.location),
                   ),
                   if (entry.officeHours.isNotEmpty)
                     Chip(
-                      avatar: const Icon(Icons.schedule_outlined, size: 16),
+                      avatar: const FUI(
+                        BoldRounded.clock,
+                        width: 16,
+                        height: 16,
+                      ),
                       label: Text(entry.officeHours),
                     ),
                   ...entry.services
@@ -698,14 +740,22 @@ class _DirectoryCard extends StatelessWidget {
                           FilledButton.icon(
                             onPressed: () =>
                                 _launch(Uri.parse('mailto:${entry.email}')),
-                            icon: const Icon(Icons.mail_outline),
+                            icon: const FUI(
+                              BoldRounded.envelope,
+                              width: 18,
+                              height: 18,
+                            ),
                             label: const Text('Email'),
                           ),
                         if (entry.phone.isNotEmpty)
                           OutlinedButton.icon(
                             onPressed: () =>
                                 _launch(Uri.parse('tel:${entry.phone}')),
-                            icon: const Icon(Icons.call_outlined),
+                            icon: const FUI(
+                              BoldRounded.phoneCall,
+                              width: 18,
+                              height: 18,
+                            ),
                             label: const Text('Call'),
                           ),
                       ],
@@ -714,7 +764,7 @@ class _DirectoryCard extends StatelessWidget {
                   IconButton.filledTonal(
                     tooltip: 'Open details',
                     onPressed: onOpen,
-                    icon: const Icon(Icons.open_in_new_rounded),
+                    icon: const FUI(BoldRounded.link, width: 18, height: 18),
                   ),
                 ],
               ),
@@ -787,7 +837,12 @@ class _DirectoryDetailSheet extends StatelessWidget {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: tone.withValues(alpha: 0.14),
-                  child: Icon(_routeIcon(entry.routeLabel), color: tone),
+                  child: FUI(
+                    _routeIcon(entry.routeLabel),
+                    color: tone,
+                    width: 24,
+                    height: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -812,14 +867,14 @@ class _DirectoryDetailSheet extends StatelessWidget {
             const SizedBox(height: 18),
             if (entry.description.isNotEmpty)
               _DetailPanel(
-                icon: Icons.info_outline,
+                icon: BoldRounded.info,
                 title: 'What this office helps with',
                 child: Text(entry.description),
               ),
             if (entry.services.isNotEmpty) ...[
               const SizedBox(height: 12),
               _DetailPanel(
-                icon: Icons.checklist_rounded,
+                icon: BoldRounded.listCheck,
                 title: 'Services',
                 child: Wrap(
                   spacing: 8,
@@ -832,27 +887,27 @@ class _DirectoryDetailSheet extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             _DetailPanel(
-              icon: Icons.place_outlined,
+              icon: BoldRounded.mapMarker,
               title: 'Visit',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DetailRow(
-                    icon: Icons.location_on_outlined,
+                    icon: BoldRounded.mapMarker,
                     label: 'Location',
                     value: entry.location,
                     onCopy: () => _copy(context, entry.location, 'Location'),
                   ),
                   if (entry.building.isNotEmpty)
                     _DetailRow(
-                      icon: Icons.apartment_outlined,
+                      icon: BoldRounded.building,
                       label: 'Building',
                       value: entry.building,
                       onCopy: () => _copy(context, entry.building, 'Building'),
                     ),
                   if (entry.officeHours.isNotEmpty)
                     _DetailRow(
-                      icon: Icons.schedule_outlined,
+                      icon: BoldRounded.clock,
                       label: 'Hours',
                       value: entry.officeHours,
                       onCopy: () => _copy(context, entry.officeHours, 'Hours'),
@@ -862,20 +917,20 @@ class _DirectoryDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _DetailPanel(
-              icon: Icons.contact_mail_outlined,
+              icon: BoldRounded.envelope,
               title: 'Contact',
               child: Column(
                 children: [
                   if (entry.email.isNotEmpty)
                     _DetailRow(
-                      icon: Icons.mail_outline,
+                      icon: BoldRounded.envelope,
                       label: 'Email',
                       value: entry.email,
                       onCopy: () => _copy(context, entry.email, 'Email'),
                     ),
                   if (entry.phone.isNotEmpty)
                     _DetailRow(
-                      icon: Icons.call_outlined,
+                      icon: BoldRounded.phoneCall,
                       label: 'Phone',
                       value: entry.phone,
                       onCopy: () => _copy(context, entry.phone, 'Phone'),
@@ -897,25 +952,33 @@ class _DirectoryDetailSheet extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () =>
                         _launch(Uri.parse('mailto:${entry.email}')),
-                    icon: const Icon(Icons.mail_outline),
+                    icon: const FUI(
+                      BoldRounded.envelope,
+                      width: 18,
+                      height: 18,
+                    ),
                     label: const Text('Email office'),
                   ),
                 if (entry.phone.isNotEmpty)
                   OutlinedButton.icon(
                     onPressed: () => _launch(Uri.parse('tel:${entry.phone}')),
-                    icon: const Icon(Icons.call_outlined),
+                    icon: const FUI(
+                      BoldRounded.phoneCall,
+                      width: 18,
+                      height: 18,
+                    ),
                     label: const Text('Call'),
                   ),
                 if (entry.mapUrl.isNotEmpty)
                   OutlinedButton.icon(
                     onPressed: () => _launch(Uri.parse(entry.mapUrl)),
-                    icon: const Icon(Icons.directions_outlined),
+                    icon: const FUI(BoldRounded.map, width: 18, height: 18),
                     label: const Text('Directions'),
                   ),
                 if (entry.website.isNotEmpty)
                   OutlinedButton.icon(
                     onPressed: () => _launch(Uri.parse(entry.website)),
-                    icon: const Icon(Icons.language_outlined),
+                    icon: const FUI(BoldRounded.globe, width: 18, height: 18),
                     label: const Text('Website'),
                   ),
               ],
@@ -951,7 +1014,7 @@ class _DetailPanel extends StatelessWidget {
     required this.child,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final Widget child;
 
@@ -973,7 +1036,7 @@ class _DetailPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: scheme.primary),
+              FUI(icon, width: 18, height: 18, color: scheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -999,7 +1062,7 @@ class _DetailRow extends StatelessWidget {
     required this.onCopy,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final String value;
   final VoidCallback onCopy;
@@ -1010,7 +1073,12 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+          FUI(
+            icon,
+            width: 18,
+            height: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1025,7 +1093,7 @@ class _DetailRow extends StatelessWidget {
           IconButton(
             tooltip: 'Copy',
             onPressed: onCopy,
-            icon: const Icon(Icons.copy_rounded, size: 18),
+            icon: const FUI(BoldRounded.copy, width: 18, height: 18),
           ),
         ],
       ),

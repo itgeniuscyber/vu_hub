@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -91,13 +92,13 @@ class _FeedScreenState extends State<FeedScreen> {
                       IconButton(
                         tooltip: 'Search',
                         onPressed: () => _openSearchSheet(context),
-                        icon: const Icon(Icons.search_rounded),
+                        icon: const FUI(BoldRounded.search),
                       ),
                       if (session.canPublishAnnouncements)
                         IconButton.filledTonal(
                           tooltip: 'Create post',
                           onPressed: () => _openPublisher(context, session),
-                          icon: const Icon(Icons.add_rounded),
+                          icon: const FUI(BoldRounded.add),
                         ),
                       const SizedBox(width: 12),
                     ],
@@ -139,7 +140,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       padding: EdgeInsets.fromLTRB(24, 26, 24, 32),
                       sliver: SliverToBoxAdapter(
                         child: EmptyState(
-                          icon: Icons.dynamic_feed_outlined,
+                          icon: BoldRounded.megaphone,
                           title: 'No Pulse posts yet',
                           message:
                               'Official campus posts matching your filters will appear here.',
@@ -277,7 +278,7 @@ class _FeedScreenState extends State<FeedScreen> {
             autofocus: true,
             onChanged: (value) => setState(() => _query = value.trim()),
             decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search_rounded),
+              prefixIcon: FUI(BoldRounded.search),
               labelText: 'Search VU Feed',
               hintText: 'Events, deadlines, guild, lecturer...',
             ),
@@ -338,7 +339,12 @@ class _PulseWordmark extends StatelessWidget {
             shape: BoxShape.circle,
             color: scheme.primary,
           ),
-          child: Icon(Icons.bolt_rounded, color: scheme.onPrimary, size: 21),
+          child: FUI(
+            BoldRounded.megaphone,
+            color: scheme.onPrimary,
+            width: 21,
+            height: 21,
+          ),
         ),
         const SizedBox(width: 10),
         Text(
@@ -373,16 +379,16 @@ class _PulseStories extends StatelessWidget {
     final categories = _FeedScreenState._categories;
     final extraCreateItem = canPublish ? 1 : 0;
     return SizedBox(
-      height: 102,
+      height: 82,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length + extraCreateItem,
-        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (canPublish && index == 0) {
             return _PulseCategoryPill(
               label: 'Create',
-              icon: Icons.add_rounded,
+              icon: BoldRounded.add,
               selected: false,
               onTap: onCreate,
               count: 0,
@@ -395,7 +401,7 @@ class _PulseStories extends StatelessWidget {
           }).length;
           return _PulseCategoryPill(
             label: label,
-            icon: _categoryIcon(label),
+            icon: _categoryFuiIcon(label),
             selected: selected == label,
             onTap: () => onSelected(label),
             count: count,
@@ -416,7 +422,7 @@ class _PulseCategoryPill extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final String icon;
   final bool selected;
   final VoidCallback onTap;
   final int count;
@@ -430,14 +436,14 @@ class _PulseCategoryPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
       child: SizedBox(
-        width: 92,
+        width: 70,
         child: Column(
           children: [
             AnimatedContainer(
               duration: 180.ms,
-              width: 66,
-              height: 66,
-              padding: const EdgeInsets.all(4),
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: SweepGradient(
@@ -447,8 +453,8 @@ class _PulseCategoryPill extends StatelessWidget {
                     ? [
                         BoxShadow(
                           color: accent.withValues(alpha: 0.26),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                         ),
                       ]
                     : null,
@@ -459,19 +465,22 @@ class _PulseCategoryPill extends StatelessWidget {
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    Icon(
+                    FUI(
                       icon,
                       color: selected ? scheme.primary : accent,
-                      size: 26,
+                      width: 20,
+                      height: 20,
+                      semanticLabel: label,
                     ),
                     if (count > 0)
                       Positioned(
-                        right: -17,
-                        bottom: -17,
+                        right: -8,
+                        bottom: -6,
                         child: Container(
+                          constraints: const BoxConstraints(minWidth: 20),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 4,
+                            horizontal: 5,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: scheme.primary,
@@ -484,6 +493,8 @@ class _PulseCategoryPill extends StatelessWidget {
                                 ?.copyWith(
                                   color: scheme.onPrimary,
                                   fontWeight: FontWeight.w900,
+                                  fontSize: 10,
+                                  height: 1,
                                 ),
                           ),
                         ),
@@ -492,23 +503,24 @@ class _PulseCategoryPill extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurface,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
+                fontSize: 11,
               ),
             ),
             if (selected)
               Container(
-                margin: const EdgeInsets.only(top: 5),
-                width: 18,
-                height: 3,
+                margin: const EdgeInsets.only(top: 4),
+                width: 16,
+                height: 2.5,
                 decoration: BoxDecoration(
                   color: scheme.primary,
                   borderRadius: BorderRadius.circular(999),
@@ -572,7 +584,9 @@ class _FeaturedPulseCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _GlassBadge(
-                    icon: item.isPinned ? Icons.push_pin : Icons.bolt_rounded,
+                    icon: item.isPinned
+                        ? BoldRounded.bookmark
+                        : _categoryFuiIcon(item.category),
                     label: item.isPinned
                         ? 'Pinned ${item.category}'
                         : item.category,
@@ -710,9 +724,11 @@ class _PulsePostCard extends StatelessWidget {
                       IconButton(
                         tooltip: 'More',
                         onPressed: () => _showPostActions(context, item),
-                        icon: Icon(
-                          Icons.more_horiz_rounded,
+                        icon: FUI(
+                          BoldRounded.menuDots,
                           color: scheme.onSurfaceVariant,
+                          width: 20,
+                          height: 20,
                         ),
                       ),
                     ],
@@ -749,24 +765,24 @@ class _PulsePostCard extends StatelessWidget {
                   child: Row(
                     children: [
                       _PulseIconButton(
-                        icon: Icons.favorite_border_rounded,
-                        activeIcon: Icons.favorite_rounded,
+                        icon: RegularRounded.heart,
+                        activeIcon: SolidRounded.heart,
                         active: likedCount > item.likeCount,
                         activeColor: const Color(0xFFE11D48),
                         onTap: onLike,
                       ),
                       _PulseIconButton(
-                        icon: Icons.mode_comment_outlined,
+                        icon: RegularRounded.comment,
                         onTap: onComment,
                       ),
                       _PulseIconButton(
-                        icon: Icons.send_rounded,
+                        icon: RegularRounded.paperPlane,
                         onTap: onShare,
                       ),
                       const Spacer(),
                       _PulseIconButton(
-                        icon: Icons.bookmark_border_rounded,
-                        activeIcon: Icons.bookmark_rounded,
+                        icon: RegularRounded.bookmark,
+                        activeIcon: SolidRounded.bookmark,
                         active: isSaved,
                         activeColor: scheme.primary,
                         onTap: onSave,
@@ -792,17 +808,17 @@ class _PulsePostCard extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           _PostChip(
-                            icon: _categoryIcon(item.category),
+                            icon: _categoryFuiIcon(item.category),
                             label: item.category,
                           ),
                           if (item.isPinned)
                             const _PostChip(
-                              icon: Icons.push_pin_rounded,
+                              icon: BoldRounded.bookmark,
                               label: 'Pinned',
                             ),
                           if (item.linkUrl.isNotEmpty)
                             _PostChip(
-                              icon: Icons.open_in_new_rounded,
+                              icon: BoldRounded.link,
                               label: 'Open link',
                               onTap: () => _launchLink(item.linkUrl),
                             ),
@@ -840,9 +856,11 @@ class _AuthorAvatar extends StatelessWidget {
         item.category,
         scheme,
       ).withValues(alpha: 0.14),
-      child: Icon(
-        _categoryIcon(item.category),
+      child: FUI(
+        _categoryFuiIcon(item.category),
         color: _categoryColor(item.category, scheme),
+        width: 22,
+        height: 22,
       ),
     );
   }
@@ -876,7 +894,7 @@ class _PulseMedia extends StatelessWidget {
               left: 12,
               top: 12,
               child: _GlassBadge(
-                icon: _categoryIcon(item.category),
+                icon: _categoryFuiIcon(item.category),
                 label: item.category,
               ),
             ),
@@ -884,10 +902,7 @@ class _PulseMedia extends StatelessWidget {
               const Positioned(
                 right: 12,
                 top: 12,
-                child: _GlassBadge(
-                  icon: Icons.push_pin_rounded,
-                  label: 'Pinned',
-                ),
+                child: _GlassBadge(icon: BoldRounded.bookmark, label: 'Pinned'),
               ),
             Positioned(
               left: 0,
@@ -935,10 +950,11 @@ class _GeneratedPulseVisual extends StatelessWidget {
           Positioned(
             right: -26,
             top: -20,
-            child: Icon(
-              _categoryIcon(item.category),
+            child: FUI(
+              _categoryFuiIcon(item.category),
               color: Colors.white.withValues(alpha: 0.18),
-              size: 168,
+              width: 168,
+              height: 168,
             ),
           ),
           Positioned(
@@ -970,8 +986,8 @@ class _PulseIconButton extends StatelessWidget {
     this.activeColor,
   });
 
-  final IconData icon;
-  final IconData? activeIcon;
+  final String icon;
+  final String? activeIcon;
   final VoidCallback onTap;
   final bool active;
   final Color? activeColor;
@@ -982,10 +998,12 @@ class _PulseIconButton extends StatelessWidget {
       onPressed: onTap,
       icon: AnimatedSwitcher(
         duration: 180.ms,
-        child: Icon(
+        child: FUI(
           active ? activeIcon ?? icon : icon,
           key: ValueKey(active),
           color: active ? activeColor : null,
+          width: 23,
+          height: 23,
         ),
       ),
     );
@@ -995,7 +1013,7 @@ class _PulseIconButton extends StatelessWidget {
 class _PostChip extends StatelessWidget {
   const _PostChip({required this.icon, required this.label, this.onTap});
 
-  final IconData icon;
+  final String icon;
   final String label;
   final VoidCallback? onTap;
 
@@ -1003,7 +1021,7 @@ class _PostChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ActionChip(
-      avatar: Icon(icon, size: 16),
+      avatar: FUI(icon, width: 16, height: 16),
       label: Text(label),
       onPressed: onTap,
       backgroundColor: scheme.surfaceContainerHighest,
@@ -1016,7 +1034,7 @@ class _PostChip extends StatelessWidget {
 class _GlassBadge extends StatelessWidget {
   const _GlassBadge({required this.icon, required this.label});
 
-  final IconData icon;
+  final String icon;
   final String label;
 
   @override
@@ -1031,7 +1049,7 @@ class _GlassBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 15),
+          FUI(icon, color: Colors.white, width: 15, height: 15),
           const SizedBox(width: 6),
           Text(
             label,
@@ -1082,9 +1100,11 @@ class _PulseImagePickerTile extends StatelessWidget {
                 child: bytes == null
                     ? ColoredBox(
                         color: scheme.surface,
-                        child: Icon(
-                          Icons.add_photo_alternate_outlined,
+                        child: FUI(
+                          BoldRounded.picture,
                           color: scheme.primary,
+                          width: 26,
+                          height: 26,
                         ),
                       )
                     : Image.memory(bytes, fit: BoxFit.cover),
@@ -1121,14 +1141,18 @@ class _PulseImagePickerTile extends StatelessWidget {
                     children: [
                       FilledButton.tonalIcon(
                         onPressed: onPick,
-                        icon: const Icon(Icons.photo_library_outlined),
+                        icon: const FUI(
+                          BoldRounded.picture,
+                          width: 18,
+                          height: 18,
+                        ),
                         label: Text(file == null ? 'Choose image' : 'Change'),
                       ),
                       if (file != null)
                         IconButton.filledTonal(
                           tooltip: 'Remove image',
                           onPressed: onRemove,
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const FUI(BoldRounded.cross),
                         ),
                     ],
                   ),
@@ -1212,7 +1236,12 @@ class _ComposerCategoryChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(_categoryIcon(category), color: accent, size: 19),
+            FUI(
+              _categoryFuiIcon(category),
+              color: accent,
+              width: 19,
+              height: 19,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -1226,7 +1255,7 @@ class _ComposerCategoryChip extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(Icons.check_circle_rounded, color: accent, size: 18),
+              FUI(SolidRounded.check, color: accent, width: 18, height: 18),
           ],
         ),
       ),
@@ -1346,9 +1375,11 @@ class _AnnouncementComposerSheetState
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: scheme.primaryContainer,
-                    child: Icon(
-                      Icons.dynamic_feed_rounded,
+                    child: FUI(
+                      BoldRounded.megaphone,
                       color: scheme.primary,
+                      width: 22,
+                      height: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1406,7 +1437,7 @@ class _AnnouncementComposerSheetState
                 decoration: const InputDecoration(
                   labelText: 'Image URL',
                   hintText: 'Paste image link, or pick from device below',
-                  prefixIcon: Icon(Icons.image_outlined),
+                  prefixIcon: FUI(BoldRounded.picture),
                 ),
               ),
               const SizedBox(height: 10),
@@ -1424,7 +1455,7 @@ class _AnnouncementComposerSheetState
                 decoration: const InputDecoration(
                   labelText: 'Action link',
                   hintText: 'Optional event, resource, or form link',
-                  prefixIcon: Icon(Icons.link_rounded),
+                  prefixIcon: FUI(BoldRounded.link),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1465,7 +1496,7 @@ class _AnnouncementComposerSheetState
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.publish_rounded),
+                      : const FUI(BoldRounded.upload, width: 18, height: 18),
                   label: const Text('Publish to VU Feed'),
                 ),
               ),
@@ -1522,7 +1553,7 @@ void _showPostDetail(
                     ),
                   ),
                   _PostChip(
-                    icon: _categoryIcon(item.category),
+                    icon: _categoryFuiIcon(item.category),
                     label: item.category,
                   ),
                 ],
@@ -1540,7 +1571,7 @@ void _showPostDetail(
               if (item.linkUrl.isNotEmpty)
                 FilledButton.icon(
                   onPressed: () => _launchLink(item.linkUrl),
-                  icon: const Icon(Icons.open_in_new_rounded),
+                  icon: const FUI(BoldRounded.link, width: 18, height: 18),
                   label: const Text('Open attached link'),
                 ),
               const SizedBox(height: 10),
@@ -1551,7 +1582,7 @@ void _showPostDetail(
                   prompt:
                       'Summarize this VU Feed post for students. Title: ${item.title}. Category: ${item.category}. Content: ${item.content}',
                 ),
-                icon: const Icon(Icons.auto_awesome_rounded),
+                icon: const FUI(BoldRounded.magicWand, width: 18, height: 18),
                 label: const Text('Summarize with AI'),
               ),
               const SizedBox(height: 14),
@@ -1755,7 +1786,7 @@ class _PulseCommentComposerState extends State<_PulseCommentComposer> {
       onSubmitted: (_) => _send(),
       decoration: InputDecoration(
         hintText: 'Reply to this update...',
-        prefixIcon: const Icon(Icons.mode_comment_outlined),
+        prefixIcon: const FUI(BoldRounded.comment),
         suffixIcon: IconButton.filled(
           tooltip: 'Send reply',
           onPressed: _isSending ? null : _send,
@@ -1764,7 +1795,7 @@ class _PulseCommentComposerState extends State<_PulseCommentComposer> {
                   dimension: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.send_rounded),
+              : const FUI(BoldRounded.paperPlane),
         ),
       ),
     );
@@ -1781,7 +1812,7 @@ void _showPostActions(BuildContext context, Announcement item) {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.auto_awesome_rounded),
+              leading: const FUI(BoldRounded.magicWand),
               title: const Text('Summarize with AI'),
               onTap: () {
                 Navigator.pop(context);
@@ -1795,7 +1826,7 @@ void _showPostActions(BuildContext context, Announcement item) {
             ),
             if (item.linkUrl.isNotEmpty)
               ListTile(
-                leading: const Icon(Icons.open_in_new_rounded),
+                leading: const FUI(BoldRounded.link),
                 title: const Text('Open attached link'),
                 onTap: () {
                   Navigator.pop(context);
@@ -1803,7 +1834,7 @@ void _showPostActions(BuildContext context, Announcement item) {
                 },
               ),
             const ListTile(
-              leading: Icon(Icons.flag_outlined),
+              leading: FUI(BoldRounded.flag),
               title: Text('Report post'),
             ),
           ],
@@ -1819,22 +1850,22 @@ Future<void> _launchLink(String value) async {
   await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
-IconData _categoryIcon(String category) {
+String _categoryFuiIcon(String category) {
   switch (category.trim().toLowerCase()) {
     case 'all':
-      return Icons.grid_view_rounded;
+      return BoldRounded.grid;
     case 'academic':
-      return Icons.menu_book_rounded;
+      return BoldRounded.book;
     case 'events':
-      return Icons.celebration_rounded;
+      return BoldRounded.calendar;
     case 'guild':
-      return Icons.groups_rounded;
+      return BoldRounded.user;
     case 'urgent':
-      return Icons.priority_high_rounded;
+      return BoldRounded.exclamation;
     case 'general':
-      return Icons.campaign_rounded;
+      return BoldRounded.megaphone;
     default:
-      return Icons.bolt_rounded;
+      return BoldRounded.megaphone;
   }
 }
 

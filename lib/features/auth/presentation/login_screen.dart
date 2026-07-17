@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -233,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _PremiumTextField(
                                     controller: _emailController,
                                     label: 'Enter Your Email',
-                                    icon: Icons.mail_outline,
+                                    icon: BoldRounded.envelope,
                                     keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
                                   ),
@@ -241,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _PremiumTextField(
                                     controller: _passwordController,
                                     label: 'Enter Password',
-                                    icon: Icons.lock_outline,
+                                    icon: BoldRounded.lock,
                                     obscureText: _obscurePassword,
                                     onSubmitted: (_) => _signIn(),
                                     suffixIcon: IconButton(
@@ -249,13 +250,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                         () => _obscurePassword =
                                             !_obscurePassword,
                                       ),
-                                      icon: Icon(
+                                      icon: FUI(
                                         _obscurePassword
-                                            ? Icons.visibility_off
-                                            : Icons.visibility,
+                                            ? BoldRounded.eyeCrossed
+                                            : BoldRounded.eye,
                                         color: isDark
                                             ? Colors.white54
                                             : Colors.black45,
+                                        width: 20,
+                                        height: 20,
                                       ),
                                     ),
                                   ),
@@ -275,10 +278,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(
-                                            Icons.error_outline,
+                                          FUI(
+                                            BoldRounded.exclamation,
                                             color: scheme.error,
-                                            size: 16,
+                                            width: 16,
+                                            height: 16,
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
@@ -402,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: IconButton(
                   onPressed: () => context.go('/onboarding'),
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const FUI(BoldRounded.arrowLeft),
                   color: isDark ? Colors.white : Colors.black87,
                   style: IconButton.styleFrom(
                     backgroundColor: (isDark ? Colors.black : Colors.white)
@@ -432,7 +436,7 @@ class _PremiumTextField extends StatelessWidget {
 
   final TextEditingController controller;
   final String label;
-  final IconData icon;
+  final String icon;
   final bool obscureText;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -462,7 +466,15 @@ class _PremiumTextField extends StatelessWidget {
           color: isDark ? Colors.white54 : Colors.black54,
           fontWeight: FontWeight.normal,
         ),
-        prefixIcon: Icon(icon, color: isDark ? Colors.white54 : Colors.black45),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(13),
+          child: FUI(
+            icon,
+            color: isDark ? Colors.white54 : Colors.black45,
+            width: 20,
+            height: 20,
+          ),
+        ),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: isDark

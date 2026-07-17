@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 import '../data/ai_service.dart';
 
@@ -55,7 +56,12 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
                 children: [
                   CircleAvatar(
                     backgroundColor: scheme.primary.withValues(alpha: 0.14),
-                    child: Icon(Icons.auto_awesome, color: scheme.primary),
+                    child: FUI(
+                      BoldRounded.magicWand,
+                      color: scheme.primary,
+                      width: 22,
+                      height: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -77,7 +83,7 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.check),
+                icon: const FUI(BoldRounded.check, width: 18, height: 18),
                 label: const Text('Done'),
               ),
             ],
@@ -139,9 +145,10 @@ class _AiResponseCard extends StatelessWidget {
                 children: response.sources
                     .map(
                       (source) => Chip(
-                        avatar: Icon(
-                          Icons.verified,
-                          size: 16,
+                        avatar: FUI(
+                          SolidRounded.check,
+                          width: 16,
+                          height: 16,
                           color: scheme.primary,
                         ),
                         label: Text(source),

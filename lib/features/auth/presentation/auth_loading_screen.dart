@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 class AuthLoadingScreen extends StatelessWidget {
   const AuthLoadingScreen({super.key});
@@ -25,7 +26,12 @@ class AuthLoadingScreen extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: const Icon(Icons.school, color: Colors.white, size: 34),
+                child: const FUI(
+                  BoldRounded.school,
+                  color: Colors.white,
+                  width: 34,
+                  height: 34,
+                ),
               ),
               const SizedBox(height: 18),
               const CircularProgressIndicator(),

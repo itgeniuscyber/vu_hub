@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/registration_repository.dart';
@@ -143,7 +144,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _RoleOptionTile(
                 title: 'Student',
                 subtitle: 'Default access to campus resources',
-                icon: Icons.school_outlined,
+                icon: BoldRounded.school,
                 isSelected: _role == AppUserRole.student,
                 onTap: () {
                   setState(() => _role = AppUserRole.student);
@@ -154,7 +155,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _RoleOptionTile(
                 title: 'Lecturer',
                 subtitle: 'Requires official staff code',
-                icon: Icons.work_outline,
+                icon: BoldRounded.briefcase,
                 isSelected: _role == AppUserRole.lecturer,
                 onTap: () {
                   setState(() => _role = AppUserRole.lecturer);
@@ -165,7 +166,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _RoleOptionTile(
                 title: 'Guild Official',
                 subtitle: 'Requires guild representative code',
-                icon: Icons.how_to_reg_outlined,
+                icon: BoldRounded.badge,
                 isSelected: _role == AppUserRole.guildOfficial,
                 onTap: () {
                   setState(() => _role = AppUserRole.guildOfficial);
@@ -176,7 +177,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _RoleOptionTile(
                 title: 'Administrator',
                 subtitle: 'Requires system admin code',
-                icon: Icons.admin_panel_settings_outlined,
+                icon: BoldRounded.shield,
                 isSelected: _role == AppUserRole.admin,
                 onTap: () {
                   setState(() => _role = AppUserRole.admin);
@@ -329,7 +330,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     _PremiumTextFormField(
                                       controller: _nameController,
                                       label: 'Full Name',
-                                      icon: Icons.person_outline,
+                                      icon: BoldRounded.user,
                                       textInputAction: TextInputAction.next,
                                       validator: _required,
                                     ),
@@ -337,7 +338,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     _PremiumTextFormField(
                                       controller: _emailController,
                                       label: 'University Email',
-                                      icon: Icons.mail_outline,
+                                      icon: BoldRounded.envelope,
                                       keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
                                       validator: _required,
@@ -346,20 +347,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     _PremiumTextFormField(
                                       controller: _passwordController,
                                       label: 'Password',
-                                      icon: Icons.lock_outline,
+                                      icon: BoldRounded.lock,
                                       obscureText: _obscurePassword,
                                       suffixIcon: IconButton(
                                         onPressed: () => setState(
                                           () => _obscurePassword =
                                               !_obscurePassword,
                                         ),
-                                        icon: Icon(
+                                        icon: FUI(
                                           _obscurePassword
-                                              ? Icons.visibility_off
-                                              : Icons.visibility,
+                                              ? BoldRounded.eyeCrossed
+                                              : BoldRounded.eye,
                                           color: isDark
                                               ? Colors.white54
                                               : Colors.black45,
+                                          width: 20,
+                                          height: 20,
                                         ),
                                       ),
                                       validator: (value) {
@@ -380,13 +383,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                             _buildInputDecoration(
                                               context,
                                               'Campus Role',
-                                              Icons.verified_user_outlined,
+                                              BoldRounded.shieldCheck,
                                             ).copyWith(
-                                              suffixIcon: Icon(
-                                                Icons.keyboard_arrow_down,
+                                              suffixIcon: FUI(
+                                                BoldRounded.angleSmallDown,
                                                 color: isDark
                                                     ? Colors.white54
                                                     : Colors.black45,
+                                                width: 20,
+                                                height: 20,
                                               ),
                                             ),
                                         child: Text(
@@ -411,7 +416,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           child: _PremiumTextFormField(
                                             controller: _facultyController,
                                             label: 'Faculty',
-                                            icon: Icons.apartment,
+                                            icon: BoldRounded.building,
                                             validator: _required,
                                           ),
                                         ),
@@ -420,7 +425,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           child: _PremiumTextFormField(
                                             controller: _regNoController,
                                             label: 'Reg/Staff No.',
-                                            icon: Icons.badge_outlined,
+                                            icon: BoldRounded.idBadge,
                                             validator: _required,
                                           ),
                                         ),
@@ -449,7 +454,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                 controller: _codeController,
                                                 label:
                                                     'Official Registration Code',
-                                                icon: Icons.key_outlined,
+                                                icon: BoldRounded.key,
                                                 textCapitalization:
                                                     TextCapitalization
                                                         .characters,
@@ -486,10 +491,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            Icon(
-                                              Icons.error_outline,
+                                            FUI(
+                                              BoldRounded.exclamation,
                                               color: scheme.error,
-                                              size: 20,
+                                              width: 20,
+                                              height: 20,
                                             ),
                                             const SizedBox(width: 10),
                                             Expanded(
@@ -593,7 +599,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
                 child: IconButton(
                   onPressed: () => context.go('/login'),
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const FUI(BoldRounded.arrowLeft),
                   color: Colors.white,
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.black.withValues(alpha: 0.3),
@@ -610,7 +616,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   InputDecoration _buildInputDecoration(
     BuildContext context,
     String label,
-    IconData icon,
+    String icon,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -621,7 +627,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         color: isDark ? Colors.white54 : Colors.black54,
         fontWeight: FontWeight.normal,
       ),
-      prefixIcon: Icon(icon, color: isDark ? Colors.white54 : Colors.black45),
+      prefixIcon: Padding(
+        padding: const EdgeInsets.all(13),
+        child: FUI(
+          icon,
+          color: isDark ? Colors.white54 : Colors.black45,
+          width: 20,
+          height: 20,
+        ),
+      ),
       filled: true,
       fillColor: isDark
           ? Colors.black.withValues(alpha: 0.2)
@@ -674,7 +688,7 @@ class _PremiumTextFormField extends StatelessWidget {
 
   final TextEditingController controller;
   final String label;
-  final IconData icon;
+  final String icon;
   final bool obscureText;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -704,7 +718,15 @@ class _PremiumTextFormField extends StatelessWidget {
           color: isDark ? Colors.white54 : Colors.black54,
           fontWeight: FontWeight.normal,
         ),
-        prefixIcon: Icon(icon, color: isDark ? Colors.white54 : Colors.black45),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(13),
+          child: FUI(
+            icon,
+            color: isDark ? Colors.white54 : Colors.black45,
+            width: 20,
+            height: 20,
+          ),
+        ),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: isDark
@@ -763,7 +785,7 @@ class _RoleOptionTile extends StatelessWidget {
 
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String icon;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -791,12 +813,13 @@ class _RoleOptionTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            FUI(
               icon,
               color: isSelected
                   ? scheme.primary
                   : (isDark ? Colors.white54 : Colors.black54),
-              size: 28,
+              width: 28,
+              height: 28,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -822,7 +845,13 @@ class _RoleOptionTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (isSelected) Icon(Icons.check_circle, color: scheme.primary),
+            if (isSelected)
+              FUI(
+                SolidRounded.check,
+                color: scheme.primary,
+                width: 20,
+                height: 20,
+              ),
           ],
         ),
       ),

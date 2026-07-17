@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
@@ -8,7 +9,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
   });
 
-  final IconData icon;
+  final Object icon;
   final String title;
   final String message;
 
@@ -21,7 +22,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 42, color: scheme.primary),
+            _EmptyStateIcon(icon: icon, color: scheme.primary),
             const SizedBox(height: 16),
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -34,5 +35,21 @@ class EmptyState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _EmptyStateIcon extends StatelessWidget {
+  const _EmptyStateIcon({required this.icon, required this.color});
+
+  final Object icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = icon;
+    if (value is String) {
+      return FUI(value, width: 42, height: 42, color: color);
+    }
+    return Icon(value as IconData, size: 42, color: color);
   }
 }

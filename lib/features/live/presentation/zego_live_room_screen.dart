@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:provider/provider.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
@@ -26,7 +27,7 @@ class ZegoLiveRoomScreen extends StatelessWidget {
     final user = session.firebaseUser;
     if (user == null) {
       return const _LiveSetupMessage(
-        icon: Icons.lock_outline_rounded,
+        icon: BoldRounded.lock,
         title: 'Sign in required',
         message: 'Please sign in before joining a camera live room.',
       );
@@ -34,7 +35,7 @@ class ZegoLiveRoomScreen extends StatelessWidget {
 
     if (!ZegoLiveConfig.isConfigured) {
       return const _LiveSetupMessage(
-        icon: Icons.key_rounded,
+        icon: BoldRounded.key,
         title: 'Live SDK keys needed',
         message:
             'Add ZEGO_APP_ID and ZEGO_APP_SIGN using dart-define, then restart the app to enable camera broadcasting.',
@@ -81,7 +82,7 @@ class _LiveSetupMessage extends StatelessWidget {
     required this.message,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String message;
 
@@ -96,7 +97,7 @@ class _LiveSetupMessage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 54, color: scheme.primary),
+              FUI(icon, width: 54, height: 54, color: scheme.primary),
               const SizedBox(height: 16),
               Text(
                 title,
@@ -114,7 +115,7 @@ class _LiveSetupMessage extends StatelessWidget {
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: () => Navigator.maybePop(context),
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: const FUI(BoldRounded.arrowLeft),
                 label: const Text('Back to Live'),
               ),
             ],

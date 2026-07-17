@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:vu_hub/core/widgets/app_fui_icon.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/app_page_route.dart';
@@ -21,42 +22,42 @@ class MoreScreen extends StatelessWidget {
     final session = context.watch<AppSession>();
     final items = [
       _MoreItem(
-        Icons.groups,
+        BoldRounded.user,
         'Guild Hub',
         'Verified guild updates and feedback',
         screen: const GuildHubScreen(),
       ),
       _MoreItem(
-        Icons.location_city,
+        BoldRounded.map,
         'Dept Finder',
         'Departments, offices, and lecturers',
         screen: const DeptFinderScreen(),
       ),
       _MoreItem(
-        Icons.live_tv,
+        BoldRounded.videoCamera,
         'VU Live',
         'Campus events and stream links',
         screen: const VuLiveScreen(),
       ),
       _MoreItem(
-        Icons.forum,
+        BoldRounded.comments,
         'Community',
         'Public chat, discussions, and posts',
         screen: const CommunityScreen(),
       ),
       _MoreItem(
-        Icons.settings,
+        BoldRounded.settings,
         'Settings',
         'Theme, notifications, and account',
       ),
     ];
     final quickStats = [
-      _MoreStat('Modules', '${items.length}', Icons.widgets_outlined),
-      _MoreStat('Role', _roleLabel(session.role), Icons.verified_user_outlined),
+      _MoreStat('Modules', '${items.length}', BoldRounded.apps),
+      _MoreStat('Role', _roleLabel(session.role), BoldRounded.badge),
       _MoreStat(
         'Access',
         session.canUploadResources ? 'Staff tools' : 'Student view',
-        Icons.hub_outlined,
+        BoldRounded.key,
       ),
     ];
 
@@ -69,7 +70,7 @@ class MoreScreen extends StatelessWidget {
               title: 'More from VU Hub',
               subtitle:
                   'Explore the wider campus toolkit: support routing, guild services, live events, and the student community.',
-              icon: Icons.grid_view_rounded,
+              icon: BoldRounded.grid,
               scheme: scheme,
               badge: 'Campus toolkit',
               height: 184,
@@ -93,7 +94,12 @@ class MoreScreen extends StatelessWidget {
                 contentPadding: const EdgeInsets.all(16),
                 leading: CircleAvatar(
                   backgroundColor: scheme.secondary.withValues(alpha: 0.14),
-                  child: Icon(Icons.person_outline, color: scheme.secondary),
+                  child: FUI(
+                    RegularRounded.user,
+                    color: scheme.secondary,
+                    width: 22,
+                    height: 22,
+                  ),
                 ),
                 title: Text(session.profile?.displayName ?? 'Signed-in user'),
                 subtitle: Text(
@@ -142,17 +148,17 @@ class MoreScreen extends StatelessWidget {
               runSpacing: 12,
               children: [
                 _MoreQuickActionChip(
-                  icon: Icons.live_tv,
+                  icon: BoldRounded.videoCamera,
                   label: 'Campus live',
                   tone: scheme.primary,
                 ),
                 _MoreQuickActionChip(
-                  icon: Icons.auto_awesome,
+                  icon: BoldRounded.magicWand,
                   label: 'AI support routes',
                   tone: scheme.secondary,
                 ),
                 _MoreQuickActionChip(
-                  icon: Icons.groups_2_outlined,
+                  icon: BoldRounded.user,
                   label: 'Guild feedback',
                   tone: scheme.tertiary,
                 ),
@@ -171,9 +177,11 @@ class MoreScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         color: scheme.primary.withValues(alpha: 0.12),
                       ),
-                      child: Icon(
-                        Icons.explore_outlined,
+                      child: FUI(
+                        BoldRounded.map,
                         color: scheme.primary,
+                        width: 23,
+                        height: 23,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -216,11 +224,18 @@ class MoreScreen extends StatelessWidget {
                                 backgroundColor: scheme.primary.withValues(
                                   alpha: 0.12,
                                 ),
-                                child: Icon(item.icon, color: scheme.primary),
+                                child: FUI(
+                                  item.icon,
+                                  color: scheme.primary,
+                                  width: 22,
+                                  height: 22,
+                                ),
                               ),
                               title: Text(item.title),
                               subtitle: Text(item.subtitle),
-                              trailing: const Icon(Icons.chevron_right),
+                              trailing: const FUI(
+                                RegularRounded.arrowSmallRight,
+                              ),
                             ),
                           ),
                         )
@@ -254,7 +269,7 @@ String _roleLabel(AppUserRole role) {
 class _MoreItem {
   const _MoreItem(this.icon, this.title, this.subtitle, {this.screen});
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final Widget? screen;
@@ -265,7 +280,7 @@ class _MoreStat {
 
   final String label;
   final String value;
-  final IconData icon;
+  final String icon;
 }
 
 class _MoreOverviewCard extends StatelessWidget {
@@ -289,7 +304,12 @@ class _MoreOverviewCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 color: scheme.primary.withValues(alpha: 0.12),
               ),
-              child: Icon(stat.icon, color: scheme.primary),
+              child: FUI(
+                stat.icon,
+                color: scheme.primary,
+                width: 22,
+                height: 22,
+              ),
             ),
             const Spacer(),
             Text(stat.value, style: Theme.of(context).textTheme.titleLarge),
@@ -309,7 +329,7 @@ class _MoreQuickActionChip extends StatelessWidget {
     required this.tone,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color tone;
 
@@ -324,7 +344,7 @@ class _MoreQuickActionChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: tone),
+          FUI(icon, width: 18, height: 18, color: tone),
           const SizedBox(width: 8),
           Text(
             label,
