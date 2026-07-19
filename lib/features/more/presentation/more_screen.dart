@@ -12,6 +12,7 @@ import '../../community/presentation/community_screen.dart';
 import '../../directory/presentation/dept_finder_screen.dart';
 import '../../guild/presentation/guild_hub_screen.dart';
 import '../../live/presentation/vu_live_screen.dart';
+import '../../notifications/presentation/notifications_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -44,6 +45,12 @@ class MoreScreen extends StatelessWidget {
         'Community',
         'Public chat, discussions, and posts',
         screen: const CommunityScreen(),
+      ),
+      _MoreItem(
+        BoldRounded.bellRing,
+        'Notifications',
+        'Campus alerts and activity inbox',
+        screen: const NotificationsScreen(),
       ),
       _MoreItem(
         BoldRounded.settings,

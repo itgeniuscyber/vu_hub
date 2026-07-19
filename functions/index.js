@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {defineSecret} = require("firebase-functions/params");
 
 admin.initializeApp();
@@ -7,6 +8,8 @@ admin.initializeApp();
 const openAiKey = defineSecret("OPENAI_API_KEY");
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const MAX_PROMPT_LENGTH = 1600;
+const NOTIFICATION_TOPIC = "campus_all";
+const NOTIFICATION_CHANNEL_ID = "campus_activity";
 
 exports.askVuAi = onCall(
   {
@@ -56,6 +59,171 @@ exports.askVuAi = onCall(
     });
 
     return aiResponse;
+  },
+);
+
+exports.notifyOnAnnouncementCreated = onDocumentCreated(
+  {
+    region: "us-central1",
+    document: "announcements/{announcementId}",
+  },
+  async (event) => {
+    const data = event.data?.data() || {};
+    const title = pickString(data, ["title", "headline", "subject"], "VU Pulse update");
+    const body = pickString(
+      data,
+      ["content", "body", "description"],
+      "A new campus notice has been published.",
+    );
+    const category = pickString(data, ["category", "type"], "Feed");
+    const pinned = Boolean(data.isPinned || data.pinned);
+    const urgent = category.toLowerCase().includes("urgent") || pinned;
+
+    await publishCampusNotification({
+      type: "announcement",
+      sourceCollection: "announcements",
+      sourceId: event.params.announcementId,
+      title: urgent ? `Urgent: ${title}` : title,
+      body,
+      category,
+      imageUrl: pickString(data, ["imageUrl", "coverUrl", "mediaUrl"], ""),
+      priority: urgent ? "high" : "normal",
+    });
+  },
+);
+
+exports.notifyOnLivePostCreated = onDocumentCreated(
+  {
+    region: "us-central1",
+    document: "live_posts/{postId}",
+  },
+  async (event) => {
+    const data = event.data?.data() || {};
+    const postType = pickString(data, ["type"], "live");
+    const status = pickString(data, ["status"], "");
+    const isLive = status === "live" || postType === "live";
+    const isShortVideo = postType === "short_video" && status === "published";
+    if (!isLive && !isShortVideo) return;
+
+    const rawTitle = pickString(data, ["title", "name"], "Campus live");
+    const title = isShortVideo ? `New VU video: ${rawTitle}` : `VU Live now: ${rawTitle}`;
+    const body = pickString(
+      data,
+      ["description", "body", "caption"],
+      isShortVideo
+        ? "A new campus video is ready to watch."
+        : "A campus live stream has started.",
+    );
+
+    await publishCampusNotification({
+      type: "live",
+      sourceCollection: "live_posts",
+      sourceId: event.params.postId,
+      title,
+      body,
+      category: pickString(data, ["category", "type"], isShortVideo ? "Video" : "Live"),
+      imageUrl: pickString(data, ["coverUrl", "thumbnailUrl", "imageUrl"], ""),
+      priority: isLive ? "high" : "normal",
+    });
+  },
+);
+
+exports.notifyOnEventCreated = onDocumentCreated(
+  {
+    region: "us-central1",
+    document: "events/{eventId}",
+  },
+  async (event) => {
+    const data = event.data?.data() || {};
+    const status = pickString(data, ["status"], "upcoming").toLowerCase();
+    if (status === "cancelled" || status === "ended") return;
+
+    const title = pickString(data, ["title", "name", "eventTitle"], "Campus event");
+    const body = pickString(
+      data,
+      ["description", "details", "body", "summary"],
+      "A new campus event has been added.",
+    );
+
+    await publishCampusNotification({
+      type: "event",
+      sourceCollection: "events",
+      sourceId: event.params.eventId,
+      title: `Event: ${title}`,
+      body,
+      category: pickString(data, ["category", "type"], "Event"),
+      imageUrl: pickString(data, ["imageUrl", "coverUrl", "bannerUrl"], ""),
+      priority: status === "live" ? "high" : "normal",
+    });
+  },
+);
+
+exports.notifyOnPublicChatCreated = onDocumentCreated(
+  {
+    region: "us-central1",
+    document: "public_chat/{messageId}",
+  },
+  async (event) => {
+    const data = event.data?.data() || {};
+    const senderId = pickString(data, ["senderId", "userId", "uid"], "");
+    const senderName = pickString(
+      data,
+      ["senderName", "displayName", "username", "name"],
+      "VU Student",
+    );
+    const text = pickString(
+      data,
+      ["text", "message", "content", "body"],
+      "Shared a message in community chat.",
+    );
+    const replyToSenderId = pickString(data, ["replyToSenderId"], "");
+    const isReply = Boolean(replyToSenderId && replyToSenderId !== senderId);
+    const title = isReply
+      ? `${senderName} replied to you`
+      : `Community chat: ${senderName}`;
+
+    if (isReply) {
+      await sendUserNotification({
+        userId: replyToSenderId,
+        senderId,
+        title,
+        body: text,
+        data: {
+          type: "chat",
+          sourceCollection: "public_chat",
+          sourceId: event.params.messageId,
+          category: "Chat reply",
+          priority: "normal",
+        },
+      });
+      return;
+    }
+
+    const notificationRef = await publishCampusNotification({
+      type: "chat",
+      sourceCollection: "public_chat",
+      sourceId: event.params.messageId,
+      title,
+      body: text,
+      category: "Community chat",
+      imageUrl: pickString(data, ["mediaUrl", "imageUrl", "chatImageUrl"], ""),
+      priority: "normal",
+      topic: "",
+    });
+    await sendAudienceNotification({
+      excludedUserId: senderId,
+      title,
+      body: text,
+      data: {
+        notificationId: notificationRef.id,
+        type: "chat",
+        sourceCollection: "public_chat",
+        sourceId: event.params.messageId,
+        category: "Community chat",
+        priority: "normal",
+        senderId,
+      },
+    });
   },
 );
 
@@ -131,6 +299,237 @@ async function buildCampusContext(db) {
       ai_faqs: faqs,
     },
   };
+}
+
+async function publishCampusNotification({
+  type,
+  sourceCollection,
+  sourceId,
+  title,
+  body,
+  category,
+  imageUrl,
+  priority = "normal",
+  topic = NOTIFICATION_TOPIC,
+  targetUserId = "",
+}) {
+  const db = admin.firestore();
+  const cleanTitle = cleanText(title, 90) || "VU Hub update";
+  const cleanBody = cleanText(body, 180) || "New campus activity is available.";
+  const cleanCategory = cleanText(category, 50) || "Campus";
+  const notificationRef = await db.collection("notifications").add({
+    type,
+    sourceCollection,
+    sourceId,
+    title: cleanTitle,
+    body: cleanBody,
+    category: cleanCategory,
+    imageUrl: cleanText(imageUrl, 600),
+    priority,
+    targetTopic: topic,
+    targetUserId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  if (!topic) {
+    return notificationRef;
+  }
+
+  const message = {
+    topic,
+    notification: {
+      title: cleanTitle,
+      body: cleanBody,
+    },
+    data: stringifyData({
+      notificationId: notificationRef.id,
+      type,
+      sourceCollection,
+      sourceId,
+      title: cleanTitle,
+      body: cleanBody,
+      category: cleanCategory,
+      priority,
+    }),
+    android: {
+      priority: priority === "high" ? "high" : "normal",
+      notification: {
+        channelId: NOTIFICATION_CHANNEL_ID,
+        clickAction: "FLUTTER_NOTIFICATION_CLICK",
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: "default",
+          badge: 1,
+        },
+      },
+    },
+  };
+
+  if (imageUrl) {
+    message.android.notification.imageUrl = cleanText(imageUrl, 600);
+    message.apns.fcm_options = {image: cleanText(imageUrl, 600)};
+  }
+
+  try {
+    const messageId = await admin.messaging().send(message);
+    await notificationRef.update({
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      fcmMessageId: messageId,
+    });
+  } catch (error) {
+    console.error("Failed to send campus notification", {
+      sourceCollection,
+      sourceId,
+      error: error.message,
+    });
+    await notificationRef.update({
+      sendError: cleanText(error.message || "FCM send failed", 240),
+      failedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  return notificationRef;
+}
+
+async function sendUserNotification({userId, senderId, title, body, data}) {
+  if (!userId || userId === senderId) return;
+  const tokens = await collectUserTokens(admin.firestore(), userId);
+  if (tokens.length === 0) return;
+
+  const cleanTitle = cleanText(title, 90) || "VU Hub";
+  const cleanBody = cleanText(body, 180) || "New chat activity.";
+  const chunks = chunk(tokens, 500);
+  await Promise.all(
+    chunks.map((tokenChunk) =>
+      admin.messaging().sendEachForMulticast({
+        tokens: tokenChunk,
+        notification: {
+          title: cleanTitle,
+          body: cleanBody,
+        },
+        data: stringifyData({
+          ...data,
+          title: cleanTitle,
+          body: cleanBody,
+          targetUserId: userId,
+        }),
+        android: {
+          priority: "high",
+          notification: {
+            channelId: NOTIFICATION_CHANNEL_ID,
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
+          },
+        },
+      }),
+    ),
+  );
+}
+
+async function sendAudienceNotification({excludedUserId, title, body, data}) {
+  const tokens = await collectAudienceTokens(admin.firestore(), excludedUserId);
+  if (tokens.length === 0) return;
+
+  const cleanTitle = cleanText(title, 90) || "VU Hub";
+  const cleanBody = cleanText(body, 180) || "New campus activity.";
+  const chunks = chunk(tokens, 500);
+  await Promise.all(
+    chunks.map((tokenChunk) =>
+      admin.messaging().sendEachForMulticast({
+        tokens: tokenChunk,
+        notification: {
+          title: cleanTitle,
+          body: cleanBody,
+        },
+        data: stringifyData({
+          ...data,
+          title: cleanTitle,
+          body: cleanBody,
+        }),
+        android: {
+          priority: "normal",
+          notification: {
+            channelId: NOTIFICATION_CHANNEL_ID,
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
+          },
+        },
+      }),
+    ),
+  );
+}
+
+async function collectUserTokens(db, userId) {
+  try {
+    const snapshot = await db
+      .collection("users")
+      .doc(userId)
+      .collection("notificationTokens")
+      .limit(500)
+      .get();
+    return snapshot.docs
+      .map((doc) => pickString(doc.data() || {}, ["token"], ""))
+      .filter(Boolean);
+  } catch (error) {
+    console.warn("Failed to collect user notification tokens", {
+      userId,
+      error: error.message,
+    });
+    return [];
+  }
+}
+
+async function collectAudienceTokens(db, excludedUserId) {
+  try {
+    const snapshot = await db
+      .collectionGroup("notificationTokens")
+      .limit(5000)
+      .get();
+    return snapshot.docs
+      .filter((doc) => {
+        const parentUserId = doc.ref.parent.parent?.id || "";
+        return parentUserId && parentUserId !== excludedUserId;
+      })
+      .map((doc) => pickString(doc.data() || {}, ["token"], ""))
+      .filter(Boolean);
+  } catch (error) {
+    console.warn("Failed to collect audience notification tokens", {
+      excludedUserId,
+      error: error.message,
+    });
+    return [];
+  }
+}
+
+function chunk(items, size) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function stringifyData(data) {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, String(value || "")]),
+  );
 }
 
 const VCLASS_GUIDE = [

@@ -20,16 +20,14 @@ class CommunityRepository {
   final FirebaseStorage? _storage;
 
   Stream<List<CommunityMessage>> watchPublicChat() {
-    return _firestore.collection('public_chat').limit(80).snapshots().map((
-      snapshot,
-    ) {
-      final items = snapshot.docs.map(CommunityMessage.fromDoc).toList();
-      items.sort(
-        (a, b) => (b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))
-            .compareTo(a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0)),
-      );
-      return items;
-    });
+    return _firestore
+        .collection('public_chat')
+        .orderBy('timestamp', descending: true)
+        .limit(80)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs.map(CommunityMessage.fromDoc).toList(),
+        );
   }
 
   Stream<List<DiscussionThread>> watchDiscussions() {
@@ -104,13 +102,16 @@ class CommunityRepository {
         'school',
         'department',
       ], fallback: ''),
+      'createdAt': Timestamp.fromDate(DateTime.now()),
       'timestamp': FieldValue.serverTimestamp(),
+      'sentAt': FieldValue.serverTimestamp(),
     };
 
     if (replyTo != null) {
       payload['replyToSender'] = replyTo.senderName;
       payload['replyToMessage'] = replyTo.text;
       payload['replyToMessageId'] = replyTo.id;
+      payload['replyToSenderId'] = replyTo.senderId;
     }
     if (imageUrl != null) {
       payload['mediaUrl'] = imageUrl;

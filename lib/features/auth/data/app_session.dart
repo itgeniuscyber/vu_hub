@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../notifications/data/notification_service.dart';
 import 'user_profile.dart';
 import 'user_profile_repository.dart';
 
@@ -38,11 +39,13 @@ class AppSession extends ChangeNotifier {
   bool get canViewAdminInsights => _profile?.canViewAdminInsights ?? false;
 
   Future<void> _handleAuthChanged(User? user) async {
+    final previousUser = _firebaseUser;
     _firebaseUser = user;
     await _profileSubscription?.cancel();
     _profileSubscription = null;
 
     if (user == null) {
+      await NotificationService.instance.detachUser(previousUser);
       _profile = null;
       _isInitializing = false;
       _isProfileLoading = false;
@@ -63,6 +66,7 @@ class AppSession extends ChangeNotifier {
               displayName: user.displayName ?? 'VU User',
               email: user.email ?? '',
             );
+        unawaited(NotificationService.instance.syncUser(user, _profile));
         _isProfileLoading = false;
         notifyListeners();
       },
@@ -75,6 +79,7 @@ class AppSession extends ChangeNotifier {
   void dispose() {
     _authSubscription?.cancel();
     _profileSubscription?.cancel();
+    NotificationService.instance.dispose();
     super.dispose();
   }
 }

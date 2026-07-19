@@ -14,6 +14,8 @@ import '../../feed/data/announcement.dart';
 import '../../feed/data/announcement_repository.dart';
 import '../../live/data/campus_event.dart';
 import '../../live/data/events_repository.dart';
+import '../../notifications/data/notification_repository.dart';
+import '../../notifications/presentation/notifications_screen.dart';
 import '../../shell/presentation/app_navigation_scope.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -245,23 +247,74 @@ class _PremiumHomeHeader extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Notification Bell
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: const FUI(
-                          RegularRounded.bell,
-                          color: Colors.white,
-                          width: 18,
-                          height: 18,
-                        ),
+                      StreamBuilder<int>(
+                        stream: NotificationRepository().watchRecentCount(),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(22),
+                            onTap: () => Navigator.of(context).push(
+                              buildAppPageRoute(const NotificationsScreen()),
+                            ),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: const FUI(
+                                    RegularRounded.bell,
+                                    color: Colors.white,
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                ),
+                                if (count > 0)
+                                  Positioned(
+                                    right: -1,
+                                    top: -1,
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF006E),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        count > 9 ? '9+' : '$count',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -75,6 +75,13 @@ service cloud.firestore {
           )
         );
       allow delete: if admin();
+
+      match /notificationTokens/{tokenId} {
+        allow read: if admin() ||
+          (signedIn() && request.auth.uid == userId);
+        allow create, update, delete: if signedIn() &&
+          request.auth.uid == userId;
+      }
     }
 
     match /registration_codes/{code} {
@@ -237,6 +244,11 @@ service cloud.firestore {
       allow read: if admin() || request.auth.uid == resource.data.userId;
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if admin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin();
     }
 
     match /audit_logs/{logId} {
