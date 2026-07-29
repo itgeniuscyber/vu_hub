@@ -44,6 +44,9 @@ exports.askVuAi = onCall(
       db,
       request.data?.resource,
     );
+    const postContext = buildFocusedPostContext(request.data?.post);
+    const targetLanguage =
+      cleanText(request.data?.targetLanguage, 80) || "English";
     const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
 
     const aiResponse = await askOpenAi({
@@ -53,6 +56,8 @@ exports.askVuAi = onCall(
       user,
       campusContext,
       resourceContext,
+      postContext,
+      targetLanguage,
       mode: cleanText(request.data?.mode, 40) || "chat",
     });
 
@@ -65,6 +70,8 @@ exports.askVuAi = onCall(
       model,
       authSource: requester.source,
       resource: resourceContext ? resourceLogSummary(resourceContext) : null,
+      post: postContext ? postLogSummary(postContext) : null,
+      targetLanguage,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -467,6 +474,29 @@ function resourceLogSummary(resourceContext) {
   });
 }
 
+function buildFocusedPostContext(rawPost) {
+  if (!rawPost || typeof rawPost !== "object") return null;
+  return compact({
+    source: cleanText(rawPost.id || rawPost.postId, 140)
+      ? `announcement:${cleanText(rawPost.id || rawPost.postId, 140)}`
+      : "selected_feed_post",
+    title: cleanText(rawPost.title, 220),
+    category: cleanText(rawPost.category, 80),
+    content: cleanText(rawPost.content || rawPost.body || rawPost.description, 3200),
+    publishedBy: cleanText(rawPost.publishedBy || rawPost.authorName, 120),
+    authorRole: cleanText(rawPost.authorRole || rawPost.role, 80),
+  });
+}
+
+function postLogSummary(postContext) {
+  return compact({
+    source: postContext.source,
+    title: postContext.title,
+    category: postContext.category,
+    target: "feed_post",
+  });
+}
+
 async function publishCampusNotification({
   type,
   sourceCollection,
@@ -826,6 +856,8 @@ async function askOpenAi({
   user,
   campusContext,
   resourceContext,
+  postContext,
+  targetLanguage,
   mode,
 }) {
   const system = [
@@ -838,6 +870,10 @@ async function askOpenAi({
     "When focused_resource is supplied, base study support on extractedText if available. If extraction failed or is empty, say so clearly and use metadata only.",
     "For study mode, format the answer with short labelled sections: Paper overview, Topics tested, Concepts to revise, Revision notes, Practice questions, and Next steps. Keep it concise but genuinely useful.",
     "For practice questions, give prompts and guidance, not dishonest completed exam submissions.",
+    "When focused_post is supplied, answer about that exact post. Do not give generic suggested steps; extract the actual action, deadline, office/person, audience, and risk from the post text when present.",
+    "For feed_post mode, format the answer with short labelled sections: Summary, Who it affects, What to do, Important date/deadline, Where to go/contact, and Student-friendly explanation.",
+    "If target_language is not English, translate or rewrite the student-facing answer in that language while preserving names, dates, departments, money amounts, and university terms accurately.",
+    "For feed_post actions, prefer specific follow-ups like Make action checklist, Translate to Luganda, Translate to Swahili, Explain difficult words, Find responsible office, Extract deadlines.",
     "Return only valid JSON with answer, sources, and actions.",
   ].join(" ");
 
@@ -860,12 +896,14 @@ async function askOpenAi({
             user,
             question: prompt,
             mode,
+            target_language: targetLanguage,
             focused_resource: resourceContext,
+            focused_post: postContext,
             campus_context: campusContext,
           }),
         },
       ],
-      max_output_tokens: mode === "study_resource" ? 1500 : 1000,
+      max_output_tokens: mode === "study_resource" ? 1500 : 1200,
       text: {
         format: {
           type: "json_schema",

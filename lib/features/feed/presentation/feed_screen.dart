@@ -13,6 +13,7 @@ import '../../../core/utils/firestore_error_message.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
+import '../../ai_desk/data/ai_service.dart';
 import '../../ai_desk/presentation/ai_insight_sheet.dart';
 import '../../auth/data/app_session.dart';
 import '../../auth/data/user_profile.dart';
@@ -1837,11 +1838,25 @@ void _showPostDetail(
                 onPressed: () => showAiInsightSheet(
                   context: context,
                   title: 'VU Feed summary',
-                  prompt:
-                      'Summarize this VU Feed post for students. Title: ${item.title}. Category: ${item.category}. Content: ${item.content}',
+                  prompt: _feedAiPrompt(item),
+                  post: _aiPost(item),
+                  mode: 'feed_post',
                 ),
                 icon: const FUI(BoldRounded.magicWand, width: 18, height: 18),
                 label: const Text('Summarize with AI'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => showAiInsightSheet(
+                  context: context,
+                  title: 'Translate post',
+                  prompt:
+                      'Translate and simplify this VU Feed post for students.',
+                  post: _aiPost(item),
+                  mode: 'feed_post',
+                ),
+                icon: const FUI(BoldRounded.comment, width: 18, height: 18),
+                label: const Text('Change language'),
               ),
               const SizedBox(height: 14),
               Divider(color: scheme.outlineVariant),
@@ -2077,8 +2092,25 @@ void _showPostActions(BuildContext context, Announcement item) {
                 showAiInsightSheet(
                   context: context,
                   title: 'VU Feed summary',
+                  prompt: _feedAiPrompt(item),
+                  post: _aiPost(item),
+                  mode: 'feed_post',
+                );
+              },
+            ),
+            ListTile(
+              leading: const FUI(BoldRounded.comment),
+              title: const Text('Translate or simplify'),
+              subtitle: const Text('Choose Luganda, Swahili, Arabic, and more'),
+              onTap: () {
+                Navigator.pop(context);
+                showAiInsightSheet(
+                  context: context,
+                  title: 'Translate post',
                   prompt:
-                      'Summarize this VU Feed post for students. Title: ${item.title}. Category: ${item.category}. Content: ${item.content}',
+                      'Translate and simplify this VU Feed post for students.',
+                  post: _aiPost(item),
+                  mode: 'feed_post',
                 );
               },
             ),
@@ -2106,6 +2138,34 @@ Future<void> _launchLink(String value) async {
   final uri = Uri.tryParse(value);
   if (uri == null) return;
   await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+AiPostContext _aiPost(Announcement item) {
+  return AiPostContext(
+    id: item.id,
+    title: item.title,
+    content: item.content,
+    category: item.category,
+    publishedBy: item.publishedBy,
+    authorRole: item.authorRole,
+  );
+}
+
+String _feedAiPrompt(Announcement item) {
+  return [
+    'Summarize this exact VU Feed post for students.',
+    'Give a useful answer with:',
+    '1. Simple summary.',
+    '2. Who is affected.',
+    '3. Required action.',
+    '4. Any deadline or important date if present.',
+    '5. Responsible office/person if present.',
+    '6. What to do next.',
+    'Post title: ${item.title}.',
+    'Category: ${item.category}.',
+    'Published by: ${item.publishedBy}.',
+    'Content: ${item.content}',
+  ].join('\n');
 }
 
 String _categoryFuiIcon(String category) {

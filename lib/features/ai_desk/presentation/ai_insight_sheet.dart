@@ -9,6 +9,8 @@ Future<void> showAiInsightSheet({
   required String title,
   required String prompt,
   AiResourceContext? resource,
+  AiPostContext? post,
+  String targetLanguage = 'English',
   String mode = 'insight',
 }) {
   return showModalBottomSheet<void>(
@@ -19,6 +21,8 @@ Future<void> showAiInsightSheet({
       title: title,
       prompt: prompt,
       resource: resource,
+      post: post,
+      targetLanguage: targetLanguage,
       mode: mode,
     ),
   );
@@ -29,12 +33,16 @@ class _AiInsightSheet extends StatefulWidget {
     required this.title,
     required this.prompt,
     required this.mode,
+    required this.targetLanguage,
     this.resource,
+    this.post,
   });
 
   final String title;
   final String prompt;
   final AiResourceContext? resource;
+  final AiPostContext? post;
+  final String targetLanguage;
   final String mode;
 
   @override
@@ -44,29 +52,48 @@ class _AiInsightSheet extends StatefulWidget {
 class _AiInsightSheetState extends State<_AiInsightSheet> {
   late Future<AiResponse> _response;
   late String _activePrompt;
+  late String _targetLanguage;
 
   @override
   void initState() {
     super.initState();
     _activePrompt = widget.prompt;
+    _targetLanguage = widget.targetLanguage;
     _response = _ask(widget.prompt);
   }
 
-  Future<AiResponse> _ask(String prompt) {
+  Future<AiResponse> _ask(String prompt, {String? targetLanguage}) {
     return FirebaseAiService().ask(
       prompt,
       resource: widget.resource,
+      post: widget.post,
+      targetLanguage: targetLanguage ?? _targetLanguage,
       mode: widget.mode,
     );
   }
 
   void _followUp(String action) {
-    final prompt = widget.resource == null
-        ? action
-        : '$action for "${widget.resource!.title}". Use the same extracted paper text and give a clear student study output.';
+    final prompt = widget.resource != null
+        ? '$action for "${widget.resource!.title}". Use the same extracted paper text and give a clear student study output.'
+        : widget.post != null
+        ? '$action for the selected VU Feed post "${widget.post!.title}". Use the same post text and give a specific useful answer.'
+        : action;
     setState(() {
       _activePrompt = action;
       _response = _ask(prompt);
+    });
+  }
+
+  void _changeLanguage(String language) {
+    final prompt = widget.post == null
+        ? 'Answer in $language: ${widget.prompt}'
+        : 'Summarize and rewrite this VU Feed post in $language. Keep the meaning accurate, explain any university terms simply, and include what the student should do next.';
+    setState(() {
+      _targetLanguage = language;
+      _activePrompt = language == 'English'
+          ? 'Student-friendly summary'
+          : 'Translate to $language';
+      _response = _ask(prompt, targetLanguage: language);
     });
   }
 
@@ -110,6 +137,13 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (widget.post != null) ...[
+                _LanguageStrip(
+                  selected: _targetLanguage,
+                  onSelected: _changeLanguage,
+                ),
+                const SizedBox(height: 14),
+              ],
               if (!snapshot.hasData)
                 const _AiLoadingCard()
               else
@@ -152,6 +186,49 @@ class _AiLoadingCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LanguageStrip extends StatelessWidget {
+  const _LanguageStrip({required this.selected, required this.onSelected});
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  static const _languages = [
+    'English',
+    'Luganda',
+    'Swahili',
+    'Runyankole',
+    'Arabic',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _languages.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final language = _languages[index];
+          final active = language == selected;
+          return ChoiceChip(
+            selected: active,
+            avatar: FUI(
+              active ? SolidRounded.check : BoldRounded.comment,
+              width: 15,
+              height: 15,
+              color: active ? scheme.onPrimaryContainer : scheme.primary,
+            ),
+            label: Text(language),
+            onSelected: (_) => onSelected(language),
+          );
+        },
       ),
     );
   }

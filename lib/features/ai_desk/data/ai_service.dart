@@ -66,10 +66,41 @@ class AiResourceContext {
   }
 }
 
+class AiPostContext {
+  const AiPostContext({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.category,
+    required this.publishedBy,
+    required this.authorRole,
+  });
+
+  final String id;
+  final String title;
+  final String content;
+  final String category;
+  final String publishedBy;
+  final String authorRole;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'category': category,
+      'publishedBy': publishedBy,
+      'authorRole': authorRole,
+    };
+  }
+}
+
 abstract class AiService {
   Future<AiResponse> ask(
     String prompt, {
     AiResourceContext? resource,
+    AiPostContext? post,
+    String targetLanguage = 'English',
     String mode = 'chat',
   });
 }
@@ -92,6 +123,8 @@ class FirebaseAiService implements AiService {
   Future<AiResponse> ask(
     String prompt, {
     AiResourceContext? resource,
+    AiPostContext? post,
+    String targetLanguage = 'English',
     String mode = 'chat',
   }) async {
     try {
@@ -109,7 +142,9 @@ class FirebaseAiService implements AiService {
         'prompt': prompt,
         'idToken': idToken,
         'mode': mode,
+        'targetLanguage': targetLanguage,
         if (resource != null) 'resource': resource.toMap(),
+        if (post != null) 'post': post.toMap(),
       });
       return AiResponse.fromMap(Map<String, dynamic>.from(result.data));
     } on FirebaseFunctionsException catch (error) {
@@ -120,6 +155,8 @@ class FirebaseAiService implements AiService {
         final local = await _fallback.ask(
           prompt,
           resource: resource,
+          post: post,
+          targetLanguage: targetLanguage,
           mode: mode,
         );
         return AiResponse(
@@ -137,7 +174,13 @@ class FirebaseAiService implements AiService {
         actions: const ['Retry question', 'Sign in again'],
       );
     } catch (_) {
-      final local = await _fallback.ask(prompt, resource: resource, mode: mode);
+      final local = await _fallback.ask(
+        prompt,
+        resource: resource,
+        post: post,
+        targetLanguage: targetLanguage,
+        mode: mode,
+      );
       return AiResponse(
         answer:
             'I could not reach the live AI backend right now. ${local.answer}',
@@ -169,6 +212,8 @@ class MockAiService implements AiService {
   Future<AiResponse> ask(
     String prompt, {
     AiResourceContext? resource,
+    AiPostContext? post,
+    String targetLanguage = 'English',
     String mode = 'chat',
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 650));
@@ -185,6 +230,27 @@ class MockAiService implements AiService {
           'Generate flashcards',
           'Create revision timetable',
           'Explain key concepts',
+        ],
+      );
+    }
+
+    if (mode == 'feed_post' || post != null) {
+      final item = post;
+      final languageNote = targetLanguage == 'English'
+          ? 'plain English'
+          : '$targetLanguage, keeping university terms clear';
+      return AiResponse(
+        answer:
+            'Student-friendly summary\n${item?.title ?? 'This post'} should be explained in $languageNote.\n\nWhat it means\n${item?.content ?? 'The selected post text will be summarized here.'}\n\nWhat students should do\n1. Check whether the post mentions a deadline.\n2. Note the office or person responsible.\n3. Save or share the notice if it affects you.\n\nNeed attention\nIf the post contains a date, requirement, payment, or application step, confirm it from the official source before acting.',
+        sources: [
+          item?.title ?? 'VU Feed post',
+          item?.publishedBy ?? 'VU Feed',
+        ],
+        actions: const [
+          'Make action checklist',
+          'Find responsible office',
+          'Translate to Luganda',
+          'Translate to Swahili',
         ],
       );
     }
