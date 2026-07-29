@@ -40,8 +40,38 @@ class AiResponse {
   }
 }
 
+class AiResourceContext {
+  const AiResourceContext({
+    required this.id,
+    required this.title,
+    required this.faculty,
+    required this.fileType,
+    required this.fileUrl,
+  });
+
+  final String id;
+  final String title;
+  final String faculty;
+  final String fileType;
+  final String fileUrl;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'faculty': faculty,
+      'fileType': fileType,
+      'fileUrl': fileUrl,
+    };
+  }
+}
+
 abstract class AiService {
-  Future<AiResponse> ask(String prompt);
+  Future<AiResponse> ask(
+    String prompt, {
+    AiResourceContext? resource,
+    String mode = 'chat',
+  });
 }
 
 class FirebaseAiService implements AiService {
@@ -59,7 +89,11 @@ class FirebaseAiService implements AiService {
   final AiService _fallback;
 
   @override
-  Future<AiResponse> ask(String prompt) async {
+  Future<AiResponse> ask(
+    String prompt, {
+    AiResourceContext? resource,
+    String mode = 'chat',
+  }) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -74,6 +108,8 @@ class FirebaseAiService implements AiService {
       final result = await callable.call<Map<String, dynamic>>({
         'prompt': prompt,
         'idToken': idToken,
+        'mode': mode,
+        if (resource != null) 'resource': resource.toMap(),
       });
       return AiResponse.fromMap(Map<String, dynamic>.from(result.data));
     } on FirebaseFunctionsException catch (error) {
@@ -81,7 +117,11 @@ class FirebaseAiService implements AiService {
         return _signedOutResponse();
       }
       if (_shouldUseFallback(error.code)) {
-        final local = await _fallback.ask(prompt);
+        final local = await _fallback.ask(
+          prompt,
+          resource: resource,
+          mode: mode,
+        );
         return AiResponse(
           answer:
               'Live VU AI is not fully connected yet (${error.code}). '
@@ -97,7 +137,7 @@ class FirebaseAiService implements AiService {
         actions: const ['Retry question', 'Sign in again'],
       );
     } catch (_) {
-      final local = await _fallback.ask(prompt);
+      final local = await _fallback.ask(prompt, resource: resource, mode: mode);
       return AiResponse(
         answer:
             'I could not reach the live AI backend right now. ${local.answer}',
@@ -126,9 +166,28 @@ class FirebaseAiService implements AiService {
 
 class MockAiService implements AiService {
   @override
-  Future<AiResponse> ask(String prompt) async {
+  Future<AiResponse> ask(
+    String prompt, {
+    AiResourceContext? resource,
+    String mode = 'chat',
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 650));
     final lower = prompt.toLowerCase();
+
+    if (mode == 'study_resource' || resource != null) {
+      final title = resource?.title ?? 'this paper';
+      final faculty = resource?.faculty ?? 'VU Vault';
+      return AiResponse(
+        answer:
+            'Paper overview\n$title is available from $faculty. Live AI will read the PDF text when the backend is deployed.\n\nTopics tested\nUse the exact questions in the paper to identify repeated units, definitions, calculations, diagrams, and applied scenarios.\n\nConcepts to revise\nStart with the course outcomes, then list every keyword from the question paper and revise each one with examples.\n\nRevision notes\n1. Summarize each question in one sentence.\n2. Write the formula, definition, or process required.\n3. Add one worked example for each repeated topic.\n\nPractice questions\nTry answering three past-paper questions under timed conditions, then compare your answer against lecture notes.\n\nNext steps\nOpen the paper, confirm the questions, then ask VU AI for flashcards or a one-week revision timetable.',
+        sources: [title, 'VU Vault', 'Local study guide'],
+        actions: const [
+          'Generate flashcards',
+          'Create revision timetable',
+          'Explain key concepts',
+        ],
+      );
+    }
 
     if (lower.contains('retake') || lower.contains('resit')) {
       return const AiResponse(

@@ -12,6 +12,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
+import '../../ai_desk/data/ai_service.dart';
 import '../../ai_desk/presentation/ai_insight_sheet.dart';
 import '../../auth/data/app_session.dart';
 import '../data/vault_repository.dart';
@@ -1040,8 +1041,9 @@ class _VaultResourceCard extends StatelessWidget {
                           onTap: () => showAiInsightSheet(
                             context: context,
                             title: 'Study with AI',
-                            prompt:
-                                'Summarize resource "${resource.title}" from ${resource.faculty}. File type: ${resource.fileType}. Study with AI.',
+                            prompt: _studyPrompt(resource),
+                            resource: _aiResource(resource),
+                            mode: 'study_resource',
                           ),
                         ),
                       ),
@@ -1180,8 +1182,9 @@ class _VaultResourceGridCard extends StatelessWidget {
                           onTap: () => showAiInsightSheet(
                             context: context,
                             title: 'Study with AI',
-                            prompt:
-                                'Summarize resource "${resource.title}" from ${resource.faculty}. File type: ${resource.fileType}. Study with AI.',
+                            prompt: _studyPrompt(resource),
+                            resource: _aiResource(resource),
+                            mode: 'study_resource',
                           ),
                         ),
                       ),
@@ -1195,6 +1198,32 @@ class _VaultResourceGridCard extends StatelessWidget {
       ),
     );
   }
+}
+
+AiResourceContext _aiResource(VaultResource resource) {
+  return AiResourceContext(
+    id: resource.id,
+    title: resource.title,
+    faculty: resource.faculty,
+    fileType: resource.fileType,
+    fileUrl: resource.fileUrl,
+  );
+}
+
+String _studyPrompt(VaultResource resource) {
+  return [
+    'Study this exact VU Vault resource with AI.',
+    'Resource title: ${resource.title}.',
+    'Faculty/department: ${resource.faculty}.',
+    'File type: ${resource.fileType}.',
+    'Read the attached PDF text if available and prepare:',
+    '1. Paper overview.',
+    '2. Topics tested.',
+    '3. Key concepts to revise.',
+    '4. Short revision notes.',
+    '5. Practice questions and answer guidance.',
+    '6. A practical revision plan for the student.',
+  ].join('\n');
 }
 
 class _VaultUploadSheet extends StatefulWidget {
@@ -1636,8 +1665,9 @@ void _showResourceDetail(BuildContext context, VaultResource resource) {
                       onPressed: () => showAiInsightSheet(
                         context: context,
                         title: 'Study with AI',
-                        prompt:
-                            'Summarize resource "${resource.title}" from ${resource.faculty}. File type: ${resource.fileType}. Study with AI.',
+                        prompt: _studyPrompt(resource),
+                        resource: _aiResource(resource),
+                        mode: 'study_resource',
                       ),
                       icon: const FUI(
                         BoldRounded.magicWand,

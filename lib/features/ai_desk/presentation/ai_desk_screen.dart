@@ -105,11 +105,20 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                               _AiToolCard(
                                 title: 'Study assist',
                                 subtitle:
-                                    'Summaries, flashcards, revision help',
+                                    'Notes, concepts, flashcards, paper review',
                                 icon: BoldRounded.book,
                                 color: scheme.secondary,
                                 onTap: () => _send(
-                                  'Create revision questions from a past paper',
+                                  'How should I use Study with AI on a VU Vault past paper?',
+                                ),
+                              ),
+                              _AiToolCard(
+                                title: 'Exam coach',
+                                subtitle: 'Revision plans and practice drills',
+                                icon: BoldRounded.listCheck,
+                                color: const Color(0xFF22C55E),
+                                onTap: () => _send(
+                                  'Create a one-week revision strategy for a difficult module using past papers.',
                                 ),
                               ),
                               _AiToolCard(
@@ -136,15 +145,15 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                                 onTap: _send,
                               ),
                               _QuickPrompt(
-                                label: 'Find past papers for DSA',
+                                label: 'How do I study a PDF past paper?',
                                 onTap: _send,
                               ),
                               _QuickPrompt(
-                                label: 'Summarize latest notice',
+                                label: 'Make a revision timetable',
                                 onTap: _send,
                               ),
                               _QuickPrompt(
-                                label: 'Where do I get support?',
+                                label: 'Explain difficult concepts simply',
                                 onTap: _send,
                               ),
                             ],
@@ -164,10 +173,14 @@ class _AiDeskScreenState extends State<AiDeskScreen> {
                   }
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _MessageBubble(message: _messages[msgIndex])
-                        .animate()
-                        .fadeIn(duration: 220.ms)
-                        .slideY(begin: 0.04, end: 0),
+                    child:
+                        _MessageBubble(
+                              message: _messages[msgIndex],
+                              onAction: _send,
+                            )
+                            .animate()
+                            .fadeIn(duration: 220.ms)
+                            .slideY(begin: 0.04, end: 0),
                   );
                 },
               ),
@@ -497,9 +510,10 @@ class _AiToolCard extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, required this.onAction});
 
   final _ChatMessage message;
+  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +615,7 @@ class _MessageBubble extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: () => onAction(action),
                         child: Text(
                           action,
                           style: const TextStyle(fontSize: 13),

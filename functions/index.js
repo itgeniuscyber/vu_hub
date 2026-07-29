@@ -2,12 +2,15 @@ const admin = require("firebase-admin");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {defineSecret} = require("firebase-functions/params");
+const {PDFParse} = require("pdf-parse");
 
 admin.initializeApp();
 
 const openAiKey = defineSecret("OPENAI_API_KEY");
 const DEFAULT_MODEL = "gpt-5.4-mini";
 const MAX_PROMPT_LENGTH = 1600;
+const MAX_RESOURCE_TEXT_LENGTH = 18000;
+const MAX_RESOURCE_DOWNLOAD_BYTES = 10 * 1024 * 1024;
 const NOTIFICATION_TOPIC = "campus_all";
 const NOTIFICATION_CHANNEL_ID = "campus_activity";
 
@@ -37,6 +40,10 @@ exports.askVuAi = onCall(
     const db = admin.firestore();
     const user = await readRequester(db, requester.uid);
     const campusContext = await buildCampusContext(db);
+    const resourceContext = await buildStudyResourceContext(
+      db,
+      request.data?.resource,
+    );
     const model = process.env.OPENAI_MODEL || DEFAULT_MODEL;
 
     const aiResponse = await askOpenAi({
@@ -45,6 +52,8 @@ exports.askVuAi = onCall(
       prompt,
       user,
       campusContext,
+      resourceContext,
+      mode: cleanText(request.data?.mode, 40) || "chat",
     });
 
     await db.collection("ai_queries").add({
@@ -55,6 +64,7 @@ exports.askVuAi = onCall(
       actions: aiResponse.actions,
       model,
       authSource: requester.source,
+      resource: resourceContext ? resourceLogSummary(resourceContext) : null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -299,6 +309,162 @@ async function buildCampusContext(db) {
       ai_faqs: faqs,
     },
   };
+}
+
+async function buildStudyResourceContext(db, rawResource) {
+  if (!rawResource || typeof rawResource !== "object") return null;
+
+  const resourceId = cleanText(rawResource.id || rawResource.resourceId, 140);
+  let data = {};
+  if (resourceId) {
+    try {
+      const doc = await db.collection("past_papers").doc(resourceId).get();
+      data = doc.exists ? doc.data() || {} : {};
+    } catch (error) {
+      console.warn("Failed to read focused AI resource", {
+        resourceId,
+        error: error.message,
+      });
+    }
+  }
+
+  const title =
+    cleanText(rawResource.title, 180) ||
+    pickString(data, ["subject", "title", "name"], "Selected resource");
+  const faculty =
+    cleanText(rawResource.faculty, 160) ||
+    pickString(data, ["faculty", "department", "school"], "");
+  const fileType = (
+    cleanText(rawResource.fileType, 20) ||
+    pickString(data, ["fileType", "type", "extension"], "")
+  ).toLowerCase();
+  const fileUrl =
+    cleanText(rawResource.fileUrl, 1400) ||
+    pickString(data, ["fileUrl", "url", "downloadUrl"], "");
+
+  const context = compact({
+    source: resourceId ? `past_papers:${resourceId}` : "selected_resource",
+    title,
+    faculty,
+    fileType,
+    fileUrl,
+    uploadedBy: pickString(data, ["uploadedBy", "authorName", "lecturerName"], ""),
+  });
+
+  if (fileUrl && fileType.includes("pdf")) {
+    const extraction = await extractPdfText(fileUrl);
+    context.extractionStatus = extraction.status;
+    context.extractedText = extraction.text;
+    context.pageCount = extraction.pageCount;
+    context.extractionMessage = extraction.message;
+  } else if (fileUrl) {
+    context.extractionStatus = "unsupported-file-type";
+    context.extractionMessage =
+      "Only PDF text extraction is enabled for now. Use title and metadata carefully.";
+  } else {
+    context.extractionStatus = "missing-file-url";
+    context.extractionMessage =
+      "The resource does not have a readable file URL in VU Vault.";
+  }
+
+  return context;
+}
+
+async function extractPdfText(fileUrl) {
+  let parser;
+  try {
+    const buffer = await downloadWithLimit(fileUrl);
+    parser = new PDFParse({data: buffer});
+    const result = await withTimeout(
+      parser.getText(),
+      25000,
+      "PDF text extraction timed out.",
+    );
+    const text = cleanStudyText(result.text || "");
+    if (!text) {
+      return {
+        status: "empty",
+        text: "",
+        pageCount: result.total || result.pages?.length || 0,
+        message:
+          "The PDF opened, but no selectable text was found. It may be a scanned image paper.",
+      };
+    }
+    return {
+      status: text.length >= MAX_RESOURCE_TEXT_LENGTH ? "truncated" : "ready",
+      text: cleanText(text, MAX_RESOURCE_TEXT_LENGTH),
+      pageCount: result.total || result.pages?.length || 0,
+      message:
+        text.length >= MAX_RESOURCE_TEXT_LENGTH
+          ? "The PDF was readable; the first extract was used for analysis."
+          : "The PDF text was extracted successfully.",
+    };
+  } catch (error) {
+    console.warn("Failed to extract PDF text", error.message);
+    return {
+      status: "failed",
+      text: "",
+      pageCount: 0,
+      message:
+        "VU AI could not read this PDF file. The link may be private, too large, scanned, or not a valid PDF.",
+    };
+  } finally {
+    if (parser) {
+      await parser.destroy().catch(() => {});
+    }
+  }
+}
+
+async function downloadWithLimit(fileUrl) {
+  const response = await withTimeout(
+    fetch(fileUrl),
+    15000,
+    "PDF download timed out.",
+  );
+  if (!response.ok) {
+    throw new Error(`PDF download failed with ${response.status}.`);
+  }
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > MAX_RESOURCE_DOWNLOAD_BYTES) {
+    throw new Error("PDF is too large for quick AI study extraction.");
+  }
+  const arrayBuffer = await withTimeout(
+    response.arrayBuffer(),
+    20000,
+    "PDF download body timed out.",
+  );
+  if (arrayBuffer.byteLength > MAX_RESOURCE_DOWNLOAD_BYTES) {
+    throw new Error("PDF is too large for quick AI study extraction.");
+  }
+  return Buffer.from(arrayBuffer);
+}
+
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+function cleanStudyText(text) {
+  return String(text || "")
+    .replace(/\u0000/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function resourceLogSummary(resourceContext) {
+  return compact({
+    source: resourceContext.source,
+    title: resourceContext.title,
+    fileType: resourceContext.fileType,
+    extractionStatus: resourceContext.extractionStatus,
+    pageCount: resourceContext.pageCount,
+  });
 }
 
 async function publishCampusNotification({
@@ -653,7 +819,15 @@ function faqSummary(id, data) {
   });
 }
 
-async function askOpenAi({apiKey, model, prompt, user, campusContext}) {
+async function askOpenAi({
+  apiKey,
+  model,
+  prompt,
+  user,
+  campusContext,
+  resourceContext,
+  mode,
+}) {
   const system = [
     "You are VU AI Desk, the official AI assistant inside VU Hub.",
     "Answer as a helpful Victoria University campus assistant.",
@@ -661,6 +835,9 @@ async function askOpenAi({apiKey, model, prompt, user, campusContext}) {
     "If the answer is not in context, say what is missing and route the student to the best office or app section.",
     "Never reveal passwords, private chats, hidden user records, API keys, internal Firestore paths, or raw document IDs unless they are needed as source labels.",
     "For academic work, help students study and understand; do not write dishonest submissions for them.",
+    "When focused_resource is supplied, base study support on extractedText if available. If extraction failed or is empty, say so clearly and use metadata only.",
+    "For study mode, format the answer with short labelled sections: Paper overview, Topics tested, Concepts to revise, Revision notes, Practice questions, and Next steps. Keep it concise but genuinely useful.",
+    "For practice questions, give prompts and guidance, not dishonest completed exam submissions.",
     "Return only valid JSON with answer, sources, and actions.",
   ].join(" ");
 
@@ -682,11 +859,13 @@ async function askOpenAi({apiKey, model, prompt, user, campusContext}) {
           content: JSON.stringify({
             user,
             question: prompt,
+            mode,
+            focused_resource: resourceContext,
             campus_context: campusContext,
           }),
         },
       ],
-      max_output_tokens: 900,
+      max_output_tokens: mode === "study_resource" ? 1500 : 1000,
       text: {
         format: {
           type: "json_schema",

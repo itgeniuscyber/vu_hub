@@ -8,49 +8,84 @@ Future<void> showAiInsightSheet({
   required BuildContext context,
   required String title,
   required String prompt,
+  AiResourceContext? resource,
+  String mode = 'insight',
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _AiInsightSheet(title: title, prompt: prompt),
+    showDragHandle: true,
+    builder: (context) => _AiInsightSheet(
+      title: title,
+      prompt: prompt,
+      resource: resource,
+      mode: mode,
+    ),
   );
 }
 
 class _AiInsightSheet extends StatefulWidget {
-  const _AiInsightSheet({required this.title, required this.prompt});
+  const _AiInsightSheet({
+    required this.title,
+    required this.prompt,
+    required this.mode,
+    this.resource,
+  });
 
   final String title;
   final String prompt;
+  final AiResourceContext? resource;
+  final String mode;
 
   @override
   State<_AiInsightSheet> createState() => _AiInsightSheetState();
 }
 
 class _AiInsightSheetState extends State<_AiInsightSheet> {
-  late final Future<AiResponse> _response;
+  late Future<AiResponse> _response;
+  late String _activePrompt;
 
   @override
   void initState() {
     super.initState();
-    _response = FirebaseAiService().ask(widget.prompt);
+    _activePrompt = widget.prompt;
+    _response = _ask(widget.prompt);
+  }
+
+  Future<AiResponse> _ask(String prompt) {
+    return FirebaseAiService().ask(
+      prompt,
+      resource: widget.resource,
+      mode: widget.mode,
+    );
+  }
+
+  void _followUp(String action) {
+    final prompt = widget.resource == null
+        ? action
+        : '$action for "${widget.resource!.title}". Use the same extracted paper text and give a clear student study output.';
+    setState(() {
+      _activePrompt = action;
+      _response = _ask(prompt);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+    final height = MediaQuery.sizeOf(context).height * 0.86;
+    return SizedBox(
+      height: height,
       child: FutureBuilder<AiResponse>(
         future: _response,
         builder: (context, snapshot) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return ListView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
             children: [
               Row(
                 children: [
@@ -66,7 +101,9 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      widget.title,
+                      _activePrompt == widget.prompt
+                          ? widget.title
+                          : _activePrompt,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
@@ -76,7 +113,7 @@ class _AiInsightSheetState extends State<_AiInsightSheet> {
               if (!snapshot.hasData)
                 const _AiLoadingCard()
               else
-                _AiResponseCard(response: snapshot.data!)
+                _AiResponseCard(response: snapshot.data!, onAction: _followUp)
                     .animate()
                     .fadeIn(duration: 260.ms)
                     .slideY(begin: 0.04, end: 0),
@@ -121,9 +158,10 @@ class _AiLoadingCard extends StatelessWidget {
 }
 
 class _AiResponseCard extends StatelessWidget {
-  const _AiResponseCard({required this.response});
+  const _AiResponseCard({required this.response, required this.onAction});
 
   final AiResponse response;
+  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +207,10 @@ class _AiResponseCard extends StatelessWidget {
                 runSpacing: 8,
                 children: response.actions
                     .map(
-                      (action) =>
-                          OutlinedButton(onPressed: () {}, child: Text(action)),
+                      (action) => OutlinedButton(
+                        onPressed: () => onAction(action),
+                        child: Text(action),
+                      ),
                     )
                     .toList(),
               ),
