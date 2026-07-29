@@ -83,6 +83,103 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _sendPasswordReset() async {
+    var email = _emailController.text.trim();
+    if (email.isEmpty) {
+      final controller = TextEditingController();
+      email =
+          await showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            builder: (context) {
+              final scheme = Theme.of(context).colorScheme;
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  8,
+                  24,
+                  MediaQuery.viewInsetsOf(context).bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                      child: FUI(
+                        BoldRounded.lock,
+                        color: scheme.primary,
+                        width: 22,
+                        height: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Reset password',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter your account email and we will send a secure reset link.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email address',
+                        prefixIcon: FUI(BoldRounded.envelope),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: () =>
+                          Navigator.pop(context, controller.text.trim()),
+                      icon: const FUI(BoldRounded.paperPlane, width: 18),
+                      label: const Text('Send reset link'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ) ??
+          '';
+      controller.dispose();
+    }
+
+    if (email.isEmpty) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password reset link sent to $email')),
+      );
+    } on FirebaseAuthException catch (error) {
+      final message = switch (error.code) {
+        'invalid-email' => 'Please enter a valid email address.',
+        'user-not-found' => 'No VU Hub account uses this email.',
+        'network-request-failed' =>
+          'Network error. Please check your internet connection.',
+        _ => error.message ?? 'We could not send the reset link.',
+      };
+      if (mounted) setState(() => _error = message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -304,9 +401,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: TextButton(
-                                      onPressed: () {
-                                        // Add forgot password navigation later if needed
-                                      },
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _sendPasswordReset,
                                       style: TextButton.styleFrom(
                                         foregroundColor: scheme.primary,
                                         padding: const EdgeInsets.symmetric(

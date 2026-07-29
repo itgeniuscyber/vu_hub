@@ -45,7 +45,7 @@ class AppSession extends ChangeNotifier {
     _profileSubscription = null;
 
     if (user == null) {
-      await NotificationService.instance.detachUser(previousUser);
+      unawaited(NotificationService.instance.detachUser(previousUser));
       _profile = null;
       _isInitializing = false;
       _isProfileLoading = false;

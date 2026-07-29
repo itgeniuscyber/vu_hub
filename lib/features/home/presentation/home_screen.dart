@@ -10,12 +10,18 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/utils/app_page_route.dart';
 import '../../auth/data/app_session.dart';
 import '../../community/presentation/community_screen.dart';
+import '../../directory/presentation/dept_finder_screen.dart';
 import '../../feed/data/announcement.dart';
 import '../../feed/data/announcement_repository.dart';
+import '../../guild/presentation/guild_hub_screen.dart';
 import '../../live/data/campus_event.dart';
 import '../../live/data/events_repository.dart';
+import '../../live/data/live_post.dart';
+import '../../live/data/live_posts_repository.dart';
+import '../../live/presentation/vu_live_screen.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/presentation/notifications_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
 import '../../shell/presentation/app_navigation_scope.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -68,7 +74,7 @@ class HomeScreen extends StatelessWidget {
               sliver: SliverList.list(
                 children: [
                   const SizedBox(height: 24),
-                  _StoryStrip(scheme: scheme),
+                  _StoryStrip(scheme: scheme, navigation: navigation),
                   const SizedBox(height: 24),
 
                   // Metric / Navigation Cards
@@ -227,23 +233,29 @@ class _PremiumHomeHeader extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Profile Badge
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            width: 2,
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => Navigator.of(
+                          context,
+                        ).push(buildAppPageRoute(const ProfileScreen())),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.4),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.white24,
-                          child: FUI(
-                            SolidRounded.user,
-                            color: Colors.white,
-                            width: 20,
-                            height: 20,
+                          child: const CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.white24,
+                            child: FUI(
+                              SolidRounded.user,
+                              color: Colors.white,
+                              width: 20,
+                              height: 20,
+                            ),
                           ),
                         ),
                       ),
@@ -435,28 +447,67 @@ class _PremiumMetricCard extends StatelessWidget {
 }
 
 class _StoryStrip extends StatelessWidget {
-  const _StoryStrip({required this.scheme});
+  const _StoryStrip({required this.scheme, required this.navigation});
 
   final ColorScheme scheme;
+  final AppNavigationScope navigation;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 84,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: const [
-          _StoryBubble(
-            label: 'Live now',
-            icon: BoldRounded.videoCamera,
-            highlighted: true,
+    return StreamBuilder<List<LivePost>>(
+      stream: LivePostsRepository().watchFeed(),
+      builder: (context, snapshot) {
+        final liveCount = (snapshot.data ?? const <LivePost>[])
+            .where(
+              (item) =>
+                  item.status == LivePostStatus.live ||
+                  item.type == LivePostType.live,
+            )
+            .length;
+        return SizedBox(
+          height: 88,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _StoryBubble(
+                label: 'Live now',
+                icon: BoldRounded.videoCamera,
+                highlighted: true,
+                liveCount: liveCount,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(buildAppPageRoute(const VuLiveScreen())),
+              ),
+              _StoryBubble(
+                label: 'Guild',
+                icon: BoldRounded.user,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(buildAppPageRoute(const GuildHubScreen())),
+              ),
+              _StoryBubble(
+                label: 'Events',
+                icon: BoldRounded.calendar,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(buildAppPageRoute(const VuLiveScreen())),
+              ),
+              _StoryBubble(
+                label: 'AI Tips',
+                icon: BoldRounded.magicWand,
+                onTap: () => navigation.onSelectTab(3),
+              ),
+              _StoryBubble(
+                label: 'Support',
+                icon: BoldRounded.headset,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(buildAppPageRoute(const DeptFinderScreen())),
+              ),
+            ],
           ),
-          _StoryBubble(label: 'Guild', icon: BoldRounded.user),
-          _StoryBubble(label: 'Events', icon: BoldRounded.calendar),
-          _StoryBubble(label: 'AI Tips', icon: BoldRounded.magicWand),
-          _StoryBubble(label: 'Support', icon: BoldRounded.headset),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -465,59 +516,132 @@ class _StoryBubble extends StatelessWidget {
   const _StoryBubble({
     required this.label,
     required this.icon,
+    required this.onTap,
     this.highlighted = false,
+    this.liveCount = 0,
   });
 
   final String label;
   final String icon;
+  final VoidCallback onTap;
   final bool highlighted;
+  final int liveCount;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isLive = liveCount > 0;
     return Padding(
       padding: const EdgeInsets.only(right: 14),
-      child: Column(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: highlighted
-                  ? LinearGradient(
-                      colors: [
-                        scheme.primary,
-                        scheme.secondary,
-                        scheme.tertiary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: highlighted ? null : scheme.surfaceContainerHighest,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: highlighted
+                        ? LinearGradient(
+                            colors: [
+                              isLive ? const Color(0xFFFF006E) : scheme.primary,
+                              scheme.secondary,
+                              scheme.tertiary,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: highlighted ? null : scheme.surfaceContainerHighest,
+                    boxShadow: isLive
+                        ? [
+                            BoxShadow(
+                              color: const Color(
+                                0xFFFF006E,
+                              ).withValues(alpha: 0.35),
+                              blurRadius: 16,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: highlighted
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : scheme.surface,
+                    ),
+                    child: FUI(
+                      icon,
+                      color: highlighted ? Colors.white : scheme.primary,
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                ),
+                if (isLive)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: _LivePulseBadge(count: liveCount),
+                  ),
+              ],
             ),
-            padding: const EdgeInsets.all(2),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: highlighted
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : scheme.surface,
-              ),
-              child: FUI(
-                icon,
-                color: highlighted ? Colors.white : scheme.primary,
-                width: 20,
-                height: 20,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        ],
+            const SizedBox(height: 8),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ),
       ),
     ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.08, end: 0);
+  }
+}
+
+class _LivePulseBadge extends StatelessWidget {
+  const _LivePulseBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF006E),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        )
+        .animate(onPlay: (controller) => controller.repeat(reverse: true))
+        .scaleXY(begin: 0.92, end: 1.08, duration: 650.ms);
   }
 }
 

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/app_page_route.dart';
 import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../admin/presentation/admin_dashboard_screen.dart';
 import '../../auth/data/app_session.dart';
 import '../../auth/data/user_profile.dart';
 import '../../community/presentation/community_screen.dart';
@@ -13,6 +14,8 @@ import '../../directory/presentation/dept_finder_screen.dart';
 import '../../guild/presentation/guild_hub_screen.dart';
 import '../../live/presentation/vu_live_screen.dart';
 import '../../notifications/presentation/notifications_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -56,7 +59,15 @@ class MoreScreen extends StatelessWidget {
         BoldRounded.settings,
         'Settings',
         'Theme, notifications, and account',
+        screen: const SettingsScreen(),
       ),
+      if (session.role == AppUserRole.admin)
+        _MoreItem(
+          BoldRounded.shieldCheck,
+          'Admin Center',
+          'Manage campus-wide app activity',
+          screen: const AdminDashboardScreen(),
+        ),
     ];
     final quickStats = [
       _MoreStat('Modules', '${items.length}', BoldRounded.apps),
@@ -80,11 +91,11 @@ class MoreScreen extends StatelessWidget {
               icon: BoldRounded.grid,
               scheme: scheme,
               badge: 'Campus toolkit',
-              height: 184,
+              height: 190,
             ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-            const SizedBox(height: 20),
+            const SizedBox(height: 17),
             SizedBox(
-              height: 118,
+              height: 123,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: quickStats.length,
@@ -97,25 +108,28 @@ class MoreScreen extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: CircleAvatar(
-                  backgroundColor: scheme.secondary.withValues(alpha: 0.14),
-                  child: FUI(
-                    RegularRounded.user,
-                    color: scheme.secondary,
-                    width: 22,
-                    height: 22,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(buildAppPageRoute(const ProfileScreen())),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: scheme.secondary.withValues(alpha: 0.14),
+                    child: FUI(
+                      RegularRounded.user,
+                      color: scheme.secondary,
+                      width: 22,
+                      height: 22,
+                    ),
                   ),
-                ),
-                title: Text(session.profile?.displayName ?? 'Signed-in user'),
-                subtitle: Text(
-                  'Role: ${_roleLabel(session.role)}'
-                  '${session.firebaseUser?.email == null ? '' : ' • ${session.firebaseUser!.email}'}',
-                ),
-                trailing: TextButton(
-                  onPressed: session.isSignedIn ? session.signOut : null,
-                  child: const Text('Sign out'),
+                  title: Text(session.profile?.displayName ?? 'Signed-in user'),
+                  subtitle: Text(
+                    'Role: ${_roleLabel(session.role)}'
+                    '${session.firebaseUser?.email == null ? '' : ' • ${session.firebaseUser!.email}'}',
+                  ),
+                  trailing: const FUI(RegularRounded.arrowSmallRight),
                 ),
               ),
             ),

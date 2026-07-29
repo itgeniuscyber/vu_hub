@@ -12,6 +12,7 @@ class Announcement {
     required this.authorRole,
     required this.authorAvatarUrl,
     required this.imageUrl,
+    required this.imageUrls,
     required this.linkUrl,
     required this.likeCount,
     required this.commentCount,
@@ -28,6 +29,7 @@ class Announcement {
   final String authorRole;
   final String authorAvatarUrl;
   final String imageUrl;
+  final List<String> imageUrls;
   final String linkUrl;
   final int likeCount;
   final int commentCount;
@@ -73,6 +75,7 @@ class Announcement {
         'mediaUrl',
         'thumbnailUrl',
       ]),
+      imageUrls: _imageUrls(data),
       linkUrl: firstString(data, ['linkUrl', 'url', 'resourceUrl']),
       likeCount: firstInt(data, ['likeCount', 'likes', 'reactions']) ?? 0,
       commentCount:
@@ -82,6 +85,26 @@ class Announcement {
       isPinned: firstBool(data, ['isPinned', 'pinned']),
     );
   }
+}
+
+List<String> _imageUrls(Map<String, dynamic> data) {
+  final urls = <String>[
+    ...asStringList(data['imageUrls']),
+    ...asStringList(data['images']),
+    ...asStringList(data['mediaUrls']),
+  ];
+  final single = firstString(data, [
+    'imageUrl',
+    'coverUrl',
+    'mediaUrl',
+    'thumbnailUrl',
+  ]);
+  if (single.isNotEmpty) urls.add(single);
+  return urls
+      .map((url) => url.trim())
+      .where((url) => url.isNotEmpty)
+      .toSet()
+      .toList();
 }
 
 class AnnouncementComment {

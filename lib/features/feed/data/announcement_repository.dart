@@ -42,21 +42,31 @@ class AnnouncementRepository {
     required String authorId,
     String authorRole = '',
     String imageUrl = '',
+    List<String> imageUrls = const [],
     PlatformFile? imageFile,
+    List<PlatformFile> imageFiles = const [],
     String linkUrl = '',
     bool isPinned = false,
   }) async {
-    var resolvedImageUrl = imageUrl.trim();
-    if (imageFile != null) {
+    final resolvedImageUrls = [
+      ...imageUrls.map((url) => url.trim()).where((url) => url.isNotEmpty),
+      if (imageUrl.trim().isNotEmpty) imageUrl.trim(),
+    ];
+    final filesToUpload = [...imageFiles, ?imageFile];
+    if (filesToUpload.isNotEmpty) {
       try {
-        resolvedImageUrl = await _uploadPulseImage(
-          userId: authorId,
-          image: imageFile,
-        );
+        for (final image in filesToUpload) {
+          resolvedImageUrls.add(
+            await _uploadPulseImage(userId: authorId, image: image),
+          );
+        }
       } catch (error) {
         throw Exception('Image upload failed: ${_friendlyUploadError(error)}');
       }
     }
+    final primaryImageUrl = resolvedImageUrls.isEmpty
+        ? ''
+        : resolvedImageUrls.first;
     await _firestore.collection('announcements').add({
       'title': title.trim(),
       'content': content.trim(),
@@ -67,7 +77,8 @@ class AnnouncementRepository {
           : publishedBy.trim(),
       'authorId': authorId,
       'authorRole': authorRole.trim(),
-      'imageUrl': resolvedImageUrl,
+      'imageUrl': primaryImageUrl,
+      'imageUrls': resolvedImageUrls.toSet().toList(),
       'linkUrl': linkUrl.trim(),
       'likeCount': 0,
       'commentCount': 0,

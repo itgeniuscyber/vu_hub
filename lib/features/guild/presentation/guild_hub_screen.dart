@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:vu_hub/core/widgets/app_fui_icon.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/utils/app_page_route.dart';
+import '../../../core/utils/firestore_error_message.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/feature_hero_banner.dart';
 import '../../../core/widgets/firestore_error_state.dart';
 import '../../../core/widgets/loading_shimmer.dart';
 import '../../../core/widgets/section_header.dart';
-import '../../directory/data/vu_resource.dart';
-import '../../directory/data/vu_resource_repository.dart';
+import '../../auth/data/app_session.dart';
+import '../../auth/data/user_profile.dart';
+import '../data/guild_repository.dart';
 import '../data/guild_models.dart';
 import 'guild_cabinet_screen.dart';
 
@@ -19,10 +22,21 @@ class GuildHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final session = context.watch<AppSession>();
+    final canPublishGuild =
+        session.role == AppUserRole.admin ||
+        session.role == AppUserRole.guildOfficial;
     return Scaffold(
+      floatingActionButton: canPublishGuild
+          ? FloatingActionButton.extended(
+              onPressed: () => _openGuildComposer(context, session),
+              icon: const FUI(BoldRounded.add, width: 18, height: 18),
+              label: const Text('Post notice'),
+            )
+          : null,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 18, 20, canPublishGuild ? 96 : 24),
           children: [
             FeatureHeroBanner(
               title: 'Guild Hub',
@@ -160,10 +174,20 @@ class GuildHubScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Verified updates'),
+            Row(
+              children: [
+                const Expanded(child: SectionHeader(title: 'Guild notices')),
+                if (canPublishGuild)
+                  FilledButton.tonalIcon(
+                    onPressed: () => _openGuildComposer(context, session),
+                    icon: const FUI(BoldRounded.add, width: 17, height: 17),
+                    label: const Text('Upload'),
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
-            StreamBuilder<List<VuResource>>(
-              stream: VuResourceRepository().watchResources(),
+            StreamBuilder<List<GuildNotice>>(
+              stream: GuildRepository().watchNotices(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Column(
@@ -183,22 +207,22 @@ class GuildHubScreen extends StatelessWidget {
                         'Guild updates could not be loaded right now.',
                   );
                 }
-                final updates = _buildUpdates(snapshot.data ?? []);
-                if (updates.isEmpty) {
+                final notices = snapshot.data ?? [];
+                if (notices.isEmpty) {
                   return const EmptyState(
-                    icon: BoldRounded.user,
+                    icon: BoldRounded.megaphone,
                     title: 'No guild updates yet',
                     message:
-                        'Verified guild notices will appear here when published.',
+                        'Guild notices from `guild_posts` will appear here when published.',
                   );
                 }
                 return Column(
-                  children: updates
-                      .take(3)
+                  children: notices
+                      .take(8)
                       .map(
-                        (update) => Padding(
+                        (notice) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _GuildUpdateCard(update: update)
+                          child: _GuildNoticeCard(notice: notice)
                               .animate()
                               .fadeIn(duration: 240.ms)
                               .slideX(begin: 0.04, end: 0),
@@ -284,24 +308,6 @@ class GuildHubScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  List<GuildUpdate> _buildUpdates(List<VuResource> resources) {
-    final guildResources = resources.where((item) {
-      final content = '${item.title} ${item.description} ${item.category}'
-          .toLowerCase();
-      return content.contains('guild') || content.contains('student');
-    });
-    return guildResources
-        .map(
-          (item) => GuildUpdate(
-            title: item.title,
-            body: item.description,
-            category: item.category,
-            isVerified: true,
-          ),
-        )
-        .toList();
   }
 }
 
@@ -476,14 +482,17 @@ class _GuildInsightCard extends StatelessWidget {
   }
 }
 
-class _GuildUpdateCard extends StatelessWidget {
-  const _GuildUpdateCard({required this.update});
+class _GuildNoticeCard extends StatelessWidget {
+  const _GuildNoticeCard({required this.notice});
 
-  final GuildUpdate update;
+  final GuildNotice notice;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tone = notice.isHighPriority
+        ? Colors.redAccent
+        : _guildTone(notice.category, scheme);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -492,63 +501,83 @@ class _GuildUpdateCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: tone.withValues(alpha: 0.13),
+                  child: FUI(
+                    notice.isHighPriority
+                        ? BoldRounded.exclamation
+                        : BoldRounded.megaphone,
+                    color: tone,
+                    width: 20,
+                    height: 20,
                   ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    color: scheme.primary.withValues(alpha: 0.1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FUI(
-                        SolidRounded.check,
-                        width: 14,
-                        height: 14,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: 6),
                       Text(
-                        update.category,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: scheme.primary),
+                        notice.authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        '${notice.category} • ${_guildTimeAgo(notice.createdAt)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Spacer(),
-                if (update.isVerified)
+                if (notice.isPinned)
                   FUI(
-                    BoldRounded.shieldCheck,
+                    BoldRounded.bookmark,
+                    color: scheme.primary,
                     width: 18,
                     height: 18,
-                    color: scheme.secondary,
                   ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(update.title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Text(update.body, maxLines: 3, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 14),
-            Row(
+            const SizedBox(height: 12),
+            Text(
+              notice.title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            if (notice.body.trim().isNotEmpty) ...[
+              const SizedBox(height: 7),
+              Text(
+                notice.body,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                FUI(
-                  BoldRounded.megaphone,
-                  width: 18,
-                  height: 18,
-                  color: scheme.primary,
+                _GuildNoticeChip(
+                  icon: BoldRounded.shieldCheck,
+                  label: 'Verified guild',
+                  tone: scheme.secondary,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Verified update',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(color: scheme.primary),
-                ),
+                if (notice.isHighPriority)
+                  const _GuildNoticeChip(
+                    icon: BoldRounded.exclamation,
+                    label: 'Priority',
+                    tone: Colors.redAccent,
+                  ),
               ],
             ),
           ],
@@ -556,6 +585,316 @@ class _GuildUpdateCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GuildNoticeChip extends StatelessWidget {
+  const _GuildNoticeChip({
+    required this.icon,
+    required this.label,
+    required this.tone,
+  });
+
+  final String icon;
+  final String label;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: tone.withValues(alpha: 0.1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FUI(icon, width: 14, height: 14, color: tone),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: tone,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _openGuildComposer(
+  BuildContext context,
+  AppSession session,
+) async {
+  final user = session.firebaseUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please sign in before posting a notice.')),
+    );
+    return;
+  }
+
+  final published = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _GuildNoticeComposerSheet(session: session),
+  );
+  if (!context.mounted || published != true) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Guild notice published successfully.')),
+  );
+}
+
+class _GuildNoticeComposerSheet extends StatefulWidget {
+  const _GuildNoticeComposerSheet({required this.session});
+
+  final AppSession session;
+
+  @override
+  State<_GuildNoticeComposerSheet> createState() =>
+      _GuildNoticeComposerSheetState();
+}
+
+class _GuildNoticeComposerSheetState extends State<_GuildNoticeComposerSheet> {
+  final _titleController = TextEditingController();
+  final _bodyController = TextEditingController();
+  String _category = 'Guild';
+  String _priority = 'normal';
+  bool _isPinned = false;
+  bool _isPublishing = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      top: false,
+      child: ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.fromLTRB(20, 8, 20, bottomInset + 20),
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: scheme.primaryContainer,
+                ),
+                child: FUI(
+                  BoldRounded.megaphone,
+                  width: 24,
+                  height: 24,
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Post guild notice',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Publish a verified update for students.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          TextField(
+            controller: _titleController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              prefixIcon: FUI(BoldRounded.bookmark),
+              labelText: 'Notice title',
+              hintText: 'e.g. Guild meeting reminder',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _bodyController,
+            minLines: 4,
+            maxLines: 7,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              prefixIcon: FUI(BoldRounded.comment),
+              labelText: 'Notice message',
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _category,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.grid),
+                    labelText: 'Category',
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Guild', child: Text('Guild')),
+                    DropdownMenuItem(
+                      value: 'Academic',
+                      child: Text('Academic'),
+                    ),
+                    DropdownMenuItem(value: 'Events', child: Text('Events')),
+                    DropdownMenuItem(value: 'Welfare', child: Text('Welfare')),
+                    DropdownMenuItem(value: 'Urgent', child: Text('Urgent')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _category = value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _priority,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.exclamation),
+                    labelText: 'Priority',
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'normal', child: Text('Normal')),
+                    DropdownMenuItem(value: 'high', child: Text('High')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _priority = value);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _isPinned,
+            onChanged: (value) => setState(() => _isPinned = value),
+            title: const Text('Pin as important guild update'),
+            subtitle: const Text('Useful for deadlines or urgent notices.'),
+            secondary: FUI(
+              BoldRounded.bookmark,
+              width: 20,
+              height: 20,
+              color: _isPinned ? scheme.primary : scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isPublishing ? null : _publish,
+              icon: _isPublishing
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.onPrimary,
+                      ),
+                    )
+                  : const FUI(BoldRounded.upload, width: 18, height: 18),
+              label: Text(_isPublishing ? 'Publishing...' : 'Publish notice'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _publish() async {
+    final title = _titleController.text.trim();
+    final body = _bodyController.text.trim();
+    if (title.isEmpty || body.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a title and message first.')),
+      );
+      return;
+    }
+
+    final user = widget.session.firebaseUser;
+    if (user == null) return;
+    setState(() => _isPublishing = true);
+    try {
+      await GuildRepository().publishNotice(
+        title: title,
+        body: body,
+        category: _category,
+        priority: _priority,
+        isPinned: _isPinned,
+        authorId: user.uid,
+        authorName:
+            widget.session.profile?.displayName ??
+            user.displayName ??
+            user.email ??
+            'VU Guild',
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isPublishing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            describeFirestoreError(
+              error,
+              fallback: 'We could not publish this guild notice.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+}
+
+Color _guildTone(String category, ColorScheme scheme) {
+  switch (category.toLowerCase()) {
+    case 'academic':
+      return scheme.primary;
+    case 'events':
+      return const Color(0xFF8B5CF6);
+    case 'welfare':
+      return const Color(0xFF22C55E);
+    case 'urgent':
+      return Colors.redAccent;
+    default:
+      return scheme.secondary;
+  }
+}
+
+String _guildTimeAgo(DateTime? date) {
+  if (date == null) return 'just now';
+  final diff = DateTime.now().difference(date);
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+  if (diff.inDays < 1) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${date.day}/${date.month}/${date.year}';
 }
 
 const _insights = [

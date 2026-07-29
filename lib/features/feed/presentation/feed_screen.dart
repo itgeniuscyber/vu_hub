@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/utils/app_page_route.dart';
 import '../../../core/utils/firestore_error_message.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/firestore_error_state.dart';
@@ -15,6 +16,9 @@ import '../../../core/widgets/loading_shimmer.dart';
 import '../../ai_desk/presentation/ai_insight_sheet.dart';
 import '../../auth/data/app_session.dart';
 import '../../auth/data/user_profile.dart';
+import '../../live/data/live_post.dart';
+import '../../live/data/live_posts_repository.dart';
+import '../../live/presentation/vu_live_screen.dart';
 import '../data/announcement.dart';
 import '../data/announcement_repository.dart';
 
@@ -29,6 +33,7 @@ class _FeedScreenState extends State<FeedScreen> {
   final _repository = AnnouncementRepository();
   final Map<String, int> _localLikes = {};
   final Set<String> _savedPosts = {};
+  late final Stream<List<Announcement>> _feedStream;
   String _selectedCategory = 'All';
   String _query = '';
 
@@ -42,6 +47,12 @@ class _FeedScreenState extends State<FeedScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _feedStream = _repository.watchLatest();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final session = context.watch<AppSession>();
     final scheme = Theme.of(context).colorScheme;
@@ -50,7 +61,7 @@ class _FeedScreenState extends State<FeedScreen> {
       body: SafeArea(
         bottom: false,
         child: StreamBuilder<List<Announcement>>(
-          stream: _repository.watchLatest(),
+          stream: _feedStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const _PulseLoading();
@@ -115,6 +126,10 @@ class _FeedScreenState extends State<FeedScreen> {
                             setState(() => _selectedCategory = value),
                       ),
                     ),
+                  ),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    sliver: SliverToBoxAdapter(child: _FeedLiveShortcut()),
                   ),
                   if (featured != null)
                     SliverPadding(
@@ -533,6 +548,128 @@ class _PulseCategoryPill extends StatelessWidget {
   }
 }
 
+class _FeedLiveShortcut extends StatelessWidget {
+  const _FeedLiveShortcut();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<LivePost>>(
+      stream: LivePostsRepository().watchFeed(),
+      builder: (context, snapshot) {
+        final liveItems = (snapshot.data ?? const <LivePost>[])
+            .where((item) => item.status == LivePostStatus.live)
+            .toList();
+        if (liveItems.isEmpty) return const SizedBox.shrink();
+
+        final scheme = Theme.of(context).colorScheme;
+        final count = liveItems.length;
+        return InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: () => Navigator.of(
+                context,
+              ).push(buildAppPageRoute(const VuLiveScreen())),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF006E), Color(0xFF7C3AED)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF006E).withValues(alpha: 0.24),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const FUI(
+                        BoldRounded.videoCamera,
+                        color: Colors.white,
+                        width: 21,
+                        height: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const _BlinkingDot(),
+                              const SizedBox(width: 7),
+                              Text(
+                                count == 1
+                                    ? '1 live session now'
+                                    : '$count live sessions now',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            liveItems.first.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.82),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FUI(
+                      BoldRounded.arrowSmallRight,
+                      color: scheme.onPrimary,
+                      width: 22,
+                      height: 22,
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .animate(onPlay: (controller) => controller.repeat(reverse: true))
+            .shimmer(duration: 1800.ms, color: Colors.white24);
+      },
+    );
+  }
+}
+
+class _BlinkingDot extends StatelessWidget {
+  const _BlinkingDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+          width: 9,
+          height: 9,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+        )
+        .animate(onPlay: (controller) => controller.repeat(reverse: true))
+        .fade(begin: 0.35, end: 1, duration: 620.ms)
+        .scaleXY(begin: 0.8, end: 1.18);
+  }
+}
+
 class _FeaturedPulseCard extends StatelessWidget {
   const _FeaturedPulseCard({required this.item, required this.onOpen});
 
@@ -542,6 +679,7 @@ class _FeaturedPulseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final coverUrl = item.imageUrls.isEmpty ? '' : item.imageUrls.first;
     return InkWell(
       borderRadius: BorderRadius.circular(28),
       onTap: onOpen,
@@ -550,10 +688,10 @@ class _FeaturedPulseCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           color: scheme.surfaceContainerHighest,
-          image: item.imageUrl.isEmpty
+          image: coverUrl.isEmpty
               ? null
               : DecorationImage(
-                  image: CachedNetworkImageProvider(item.imageUrl),
+                  image: CachedNetworkImageProvider(coverUrl),
                   fit: BoxFit.cover,
                 ),
         ),
@@ -564,7 +702,7 @@ class _FeaturedPulseCard extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: item.imageUrl.isEmpty
+                    colors: coverUrl.isEmpty
                         ? _pulseGradientColors(item.category)
                         : [
                             Colors.black.withValues(alpha: 0.08),
@@ -746,20 +884,35 @@ class _PulsePostCard extends StatelessWidget {
                 ),
                 if (item.content.trim().isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                    child: Text(
-                      item.content,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.content,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        if (item.content.length > 220)
+                          TextButton(
+                            onPressed: onOpen,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('Read full post'),
+                          ),
+                      ],
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _PulseMedia(item: item),
-                ),
+                if (item.imageUrls.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _PulseMedia(item: item),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
                   child: Row(
@@ -873,8 +1026,8 @@ class _PulseMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = _categoryColor(item.category, scheme);
+    final images = item.imageUrls;
+    if (images.isEmpty) return const SizedBox.shrink();
     return AspectRatio(
       aspectRatio: 1.08,
       child: ClipRRect(
@@ -882,14 +1035,7 @@ class _PulseMedia extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (item.imageUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: item.imageUrl,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => _GeneratedPulseVisual(item: item),
-              )
-            else
-              _GeneratedPulseVisual(item: item),
+            _PulseImageGrid(images: images),
             Positioned(
               left: 12,
               top: 12,
@@ -904,25 +1050,6 @@ class _PulseMedia extends StatelessWidget {
                 top: 12,
                 child: _GlassBadge(icon: BoldRounded.bookmark, label: 'Pinned'),
               ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 84,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      accent.withValues(alpha: 0.56),
-                      Colors.black.withValues(alpha: 0.55),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -930,48 +1057,74 @@ class _PulseMedia extends StatelessWidget {
   }
 }
 
-class _GeneratedPulseVisual extends StatelessWidget {
-  const _GeneratedPulseVisual({required this.item});
+class _PulseImageGrid extends StatelessWidget {
+  const _PulseImageGrid({required this.images});
 
-  final Announcement item;
+  final List<String> images;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _pulseGradientColors(item.category),
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    if (images.length == 1) {
+      return _NetworkPulseImage(url: images.first);
+    }
+    final visible = images.take(4).toList();
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 2,
+        crossAxisSpacing: 2,
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -26,
-            top: -20,
-            child: FUI(
-              _categoryFuiIcon(item.category),
-              color: Colors.white.withValues(alpha: 0.18),
-              width: 168,
-              height: 168,
-            ),
-          ),
-          Positioned(
-            left: 22,
-            right: 22,
-            bottom: 22,
-            child: Text(
-              item.title,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final extra = images.length - visible.length;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _NetworkPulseImage(url: visible[index]),
+            if (index == visible.length - 1 && extra > 0)
+              ColoredBox(
+                color: Colors.black.withValues(alpha: 0.48),
+                child: Center(
+                  child: Text(
+                    '+$extra',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
-            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NetworkPulseImage extends StatelessWidget {
+  const _NetworkPulseImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      errorWidget: (_, _, _) => ColoredBox(
+        color: scheme.surfaceContainerHighest,
+        child: Center(
+          child: FUI(
+            BoldRounded.picture,
+            width: 30,
+            height: 30,
+            color: scheme.onSurfaceVariant,
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1067,19 +1220,21 @@ class _GlassBadge extends StatelessWidget {
 
 class _PulseImagePickerTile extends StatelessWidget {
   const _PulseImagePickerTile({
-    required this.file,
+    required this.files,
     required this.onPick,
-    required this.onRemove,
+    required this.onRemoveAt,
+    required this.onClear,
   });
 
-  final PlatformFile? file;
+  final List<PlatformFile> files;
   final VoidCallback? onPick;
-  final VoidCallback? onRemove;
+  final ValueChanged<int>? onRemoveAt;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bytes = file?.bytes;
+    final hasFiles = files.isNotEmpty;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -1092,31 +1247,16 @@ class _PulseImagePickerTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: bytes == null
-                    ? ColoredBox(
-                        color: scheme.surface,
-                        child: FUI(
-                          BoldRounded.picture,
-                          color: scheme.primary,
-                          width: 26,
-                          height: 26,
-                        ),
-                      )
-                    : Image.memory(bytes, fit: BoxFit.cover),
-              ),
-            ),
+            _SelectedImagesPreview(files: files, onRemoveAt: onRemoveAt),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    file == null ? 'Upload from device' : file!.name,
+                    hasFiles
+                        ? '${files.length} image${files.length == 1 ? '' : 's'} selected'
+                        : 'Upload from device',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -1126,9 +1266,9 @@ class _PulseImagePickerTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    file == null
+                    !hasFiles
                         ? 'Use a poster, notice artwork, or campus photo.'
-                        : 'This image will be uploaded to Firebase Storage.',
+                        : 'Images will be uploaded to Firebase Storage.',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1146,12 +1286,12 @@ class _PulseImagePickerTile extends StatelessWidget {
                           width: 18,
                           height: 18,
                         ),
-                        label: Text(file == null ? 'Choose image' : 'Change'),
+                        label: Text(hasFiles ? 'Add images' : 'Choose images'),
                       ),
-                      if (file != null)
+                      if (hasFiles)
                         IconButton.filledTonal(
-                          tooltip: 'Remove image',
-                          onPressed: onRemove,
+                          tooltip: 'Clear images',
+                          onPressed: onClear,
                           icon: const FUI(BoldRounded.cross),
                         ),
                     ],
@@ -1161,6 +1301,98 @@ class _PulseImagePickerTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SelectedImagesPreview extends StatelessWidget {
+  const _SelectedImagesPreview({required this.files, required this.onRemoveAt});
+
+  final List<PlatformFile> files;
+  final ValueChanged<int>? onRemoveAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (files.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 72,
+          height: 72,
+          child: ColoredBox(
+            color: scheme.surface,
+            child: FUI(
+              BoldRounded.picture,
+              color: scheme.primary,
+              width: 26,
+              height: 26,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 92,
+      height: 78,
+      child: Stack(
+        children: List.generate(files.take(3).length, (index) {
+          final file = files[index];
+          final bytes = file.bytes;
+          return Positioned(
+            left: index * 18,
+            top: index * 3,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    child: bytes == null
+                        ? FUI(
+                            BoldRounded.picture,
+                            color: scheme.primary,
+                            width: 24,
+                            height: 24,
+                          )
+                        : Image.memory(bytes, fit: BoxFit.cover),
+                  ),
+                ),
+                Positioned(
+                  right: -8,
+                  top: -8,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: onRemoveAt == null ? null : () => onRemoveAt!(index),
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: scheme.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: scheme.surface, width: 2),
+                      ),
+                      child: FUI(
+                        BoldRounded.cross,
+                        width: 11,
+                        height: 11,
+                        color: scheme.onError,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
       ),
     );
   }
@@ -1280,7 +1512,7 @@ class _AnnouncementComposerSheetState
   final _contentController = TextEditingController();
   final _imageController = TextEditingController();
   final _linkController = TextEditingController();
-  PlatformFile? _selectedImage;
+  final List<PlatformFile> _selectedImages = [];
   String _category = 'General';
   bool _isPinned = false;
   bool _isSaving = false;
@@ -1321,7 +1553,8 @@ class _AnnouncementComposerSheetState
         authorId: user.uid,
         authorRole: _roleLabel(profile?.role ?? AppUserRole.student),
         imageUrl: _imageController.text,
-        imageFile: _selectedImage,
+        imageUrls: _imageLinksFromController(),
+        imageFiles: _selectedImages,
         linkUrl: _linkController.text,
         isPinned: _isPinned,
       );
@@ -1338,19 +1571,38 @@ class _AnnouncementComposerSheetState
   Future<void> _pickImage() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
-      allowMultiple: false,
+      allowMultiple: true,
       withData: true,
     );
-    final file = result?.files.single;
-    if (file == null) return;
-    if ((file.bytes == null || file.bytes!.isEmpty) && file.path == null) {
+    final files = result?.files ?? const <PlatformFile>[];
+    if (files.isEmpty) return;
+    final unreadable = files.where(
+      (file) =>
+          (file.bytes == null || file.bytes!.isEmpty) && file.path == null,
+    );
+    if (unreadable.isNotEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('We could not read that image.')),
+        const SnackBar(content: Text('One of the images could not be read.')),
       );
       return;
     }
-    setState(() => _selectedImage = file);
+    setState(() {
+      _selectedImages
+        ..addAll(files)
+        ..removeWhere((file) => file.size > 8 * 1024 * 1024);
+      if (_selectedImages.length > 8) {
+        _selectedImages.removeRange(8, _selectedImages.length);
+      }
+    });
+  }
+
+  List<String> _imageLinksFromController() {
+    return _imageController.text
+        .split(RegExp(r'[\n, ]+'))
+        .map((url) => url.trim())
+        .where((url) => url.startsWith('http://') || url.startsWith('https://'))
+        .toList();
   }
 
   @override
@@ -1442,11 +1694,15 @@ class _AnnouncementComposerSheetState
               ),
               const SizedBox(height: 10),
               _PulseImagePickerTile(
-                file: _selectedImage,
+                files: _selectedImages,
                 onPick: _isSaving ? null : _pickImage,
-                onRemove: _isSaving
+                onRemoveAt: _isSaving
                     ? null
-                    : () => setState(() => _selectedImage = null),
+                    : (index) =>
+                          setState(() => _selectedImages.removeAt(index)),
+                onClear: _isSaving
+                    ? null
+                    : () => setState(() => _selectedImages.clear()),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1530,8 +1786,10 @@ void _showPostDetail(
             controller: controller,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
-              _PulseMedia(item: item),
-              const SizedBox(height: 18),
+              if (item.imageUrls.isNotEmpty) ...[
+                _PulseMedia(item: item),
+                const SizedBox(height: 18),
+              ],
               Row(
                 children: [
                   _AuthorAvatar(item: item),

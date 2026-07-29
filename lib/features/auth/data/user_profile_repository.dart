@@ -41,4 +41,25 @@ class UserProfileRepository {
     }
     return UserProfile.fromFirestore(uid, data);
   }
+
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required String faculty,
+    required String regNo,
+  }) async {
+    final trimmedName = displayName.trim();
+    await _firestore.collection('users').doc(uid).set({
+      'displayName': trimmedName,
+      'name': trimmedName,
+      'faculty': faculty.trim(),
+      'regNo': regNo.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    final user = _auth.currentUser;
+    if (user != null && user.uid == uid && trimmedName.isNotEmpty) {
+      await user.updateDisplayName(trimmedName);
+    }
+  }
 }
