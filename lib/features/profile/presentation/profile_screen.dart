@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -198,10 +200,85 @@ class ProfileScreen extends StatelessWidget {
                 ).push(buildAppPageRoute(const AdminDashboardScreen())),
               ),
             ],
+            const SizedBox(height: 22),
+            const SectionHeader(title: 'Security'),
+            const SizedBox(height: 12),
+            _SignOutCard(
+              onTap: session.isSignedIn
+                  ? () => _signOut(context, session)
+                  : null,
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _SignOutCard extends StatelessWidget {
+  const _SignOutCard({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.errorContainer.withValues(alpha: 0.42),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(17),
+                  color: scheme.error.withValues(alpha: 0.13),
+                ),
+                child: FUI(
+                  BoldRounded.signOut,
+                  width: 22,
+                  height: 22,
+                  color: scheme.error,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sign out',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Leave this device session safely.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FUI(
+                RegularRounded.arrowSmallRight,
+                width: 20,
+                height: 20,
+                color: scheme.error,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.02, end: 0);
   }
 }
 
@@ -482,6 +559,21 @@ Future<void> _openEditProfile(BuildContext context, AppSession session) async {
   nameController.dispose();
   facultyController.dispose();
   regNoController.dispose();
+}
+
+void _signOut(BuildContext context, AppSession session) {
+  unawaited(_performSignOut(context, session));
+}
+
+Future<void> _performSignOut(BuildContext context, AppSession session) async {
+  try {
+    await session.signOut();
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Could not sign out: $error')));
+  }
 }
 
 String _roleLabel(AppUserRole role) {

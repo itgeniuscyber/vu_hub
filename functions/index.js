@@ -175,6 +175,43 @@ exports.notifyOnEventCreated = onDocumentCreated(
   },
 );
 
+exports.notifyOnAppUpdateCreated = onDocumentCreated(
+  {
+    region: "us-central1",
+    document: "app_updates/{updateId}",
+  },
+  async (event) => {
+    const data = event.data?.data() || {};
+    const isActive = data.isActive !== false && data.active !== false;
+    if (!isActive) return;
+
+    const versionName = pickString(data, ["versionName", "version"], "");
+    const versionCode = pickString(data, ["versionCode", "buildNumber"], "");
+    const title = pickString(
+      data,
+      ["title", "headline"],
+      versionName ? `VU Hub ${versionName} is ready` : "VU Hub update is ready",
+    );
+    const body = pickString(
+      data,
+      ["summary", "body", "description"],
+      "Open VU Hub to see what changed and get the latest version.",
+    );
+    const required = Boolean(data.isRequired || data.forceUpdate || data.required);
+
+    await publishCampusNotification({
+      type: "app_update",
+      sourceCollection: "app_updates",
+      sourceId: event.params.updateId,
+      title: required ? `Required update: ${title}` : title,
+      body,
+      category: versionCode ? `Build ${versionCode}` : "App update",
+      imageUrl: pickString(data, ["imageUrl", "coverUrl"], ""),
+      priority: required ? "high" : "normal",
+    });
+  },
+);
+
 exports.notifyOnPublicChatCreated = onDocumentCreated(
   {
     region: "us-central1",

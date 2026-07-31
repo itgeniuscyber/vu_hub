@@ -13,9 +13,10 @@ import '../../auth/data/user_profile.dart';
 import '../../feed/data/announcement.dart';
 import '../../guild/data/guild_repository.dart';
 import '../../live/data/live_post.dart';
+import '../../updates/data/app_update.dart';
 import '../data/admin_repository.dart';
 
-enum _AdminSection { feed, guild, live, users }
+enum _AdminSection { feed, guild, live, updates, users }
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -144,6 +145,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _GuildAdminList(repository: _repository);
       case _AdminSection.live:
         return _LiveAdminList(repository: _repository);
+      case _AdminSection.updates:
+        return _UpdatesAdminList(repository: _repository);
       case _AdminSection.users:
         return _UsersAdminList(repository: _repository, session: session);
     }
@@ -289,6 +292,12 @@ class _OverviewStrip extends StatelessWidget {
         BoldRounded.user,
         const Color(0xFF22C55E),
       ),
+      _AdminStat(
+        'Updates',
+        '${overview.appUpdates}',
+        BoldRounded.cloudUpload,
+        const Color(0xFFF59E0B),
+      ),
     ];
     return SizedBox(
       height: 116,
@@ -374,6 +383,11 @@ class _AdminSectionSelector extends StatelessWidget {
             value: _AdminSection.live,
             icon: FUI(BoldRounded.videoCamera, width: 17, height: 17),
             label: Text('Live'),
+          ),
+          ButtonSegment(
+            value: _AdminSection.updates,
+            icon: FUI(BoldRounded.cloudUpload, width: 17, height: 17),
+            label: Text('Updates'),
           ),
           ButtonSegment(
             value: _AdminSection.users,
@@ -544,6 +558,250 @@ class _LiveAdminList extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _UpdatesAdminList extends StatelessWidget {
+  const _UpdatesAdminList({required this.repository});
+
+  final AdminRepository repository;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<AppUpdate>>(
+      stream: repository.watchAppUpdates(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return FirestoreErrorState(
+            error: snapshot.error!,
+            title: 'Release controls unavailable',
+          );
+        }
+        final items = snapshot.data;
+        if (items == null) return const _AdminListLoading();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PublishUpdateCard(
+              onTap: () => _publishAppUpdate(context, repository),
+            ),
+            const SizedBox(height: 12),
+            if (items.isEmpty)
+              const EmptyState(
+                icon: BoldRounded.cloudUpload,
+                title: 'No release updates yet',
+                message:
+                    'Publish one when you want users to know about a new app version.',
+              )
+            else
+              ...items.map(
+                (item) => _AppUpdateAdminCard(
+                  update: item,
+                  onToggleActive: () => _runAdminAction(
+                    context,
+                    success: item.isActive
+                        ? 'Release update deactivated.'
+                        : 'Release update activated.',
+                    action: () => repository.setAppUpdateActive(
+                      id: item.id,
+                      isActive: !item.isActive,
+                    ),
+                  ),
+                  onDelete: () => _deleteItem(
+                    context,
+                    title: item.title,
+                    action: () => repository.deleteAppUpdate(item.id),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PublishUpdateCard extends StatelessWidget {
+  const _PublishUpdateCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.primaryContainer.withValues(alpha: 0.48),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: scheme.primary.withValues(alpha: 0.14),
+                child: FUI(
+                  BoldRounded.cloudUpload,
+                  color: scheme.primary,
+                  width: 20,
+                  height: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Publish release update',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Send a push notification and show the in-app update popup.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              FUI(
+                BoldRounded.arrowRight,
+                color: scheme.primary,
+                width: 19,
+                height: 19,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppUpdateAdminCard extends StatelessWidget {
+  const _AppUpdateAdminCard({
+    required this.update,
+    required this.onToggleActive,
+    required this.onDelete,
+  });
+
+  final AppUpdate update;
+  final VoidCallback onToggleActive;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tone = update.isRequired
+        ? scheme.error
+        : update.isActive
+        ? scheme.primary
+        : scheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 23,
+                    backgroundColor: tone.withValues(alpha: 0.13),
+                    child: FUI(
+                      update.isRequired
+                          ? BoldRounded.exclamation
+                          : BoldRounded.cloudUpload,
+                      color: tone,
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          update.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Version ${update.versionName} • build ${update.versionCode}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _MiniPill(
+                    label: update.isActive ? 'Active' : 'Off',
+                    tone: tone,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                update.summary,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              if (update.changes.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: update.changes.take(3).map((change) {
+                    return _MiniPill(label: change, tone: scheme.primary);
+                  }).toList(),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      update.updateUrl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    tooltip: update.isActive ? 'Deactivate' : 'Activate',
+                    onPressed: onToggleActive,
+                    icon: FUI(
+                      update.isActive ? BoldRounded.cross : BoldRounded.check,
+                      width: 17,
+                      height: 17,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton.filledTonal(
+                    tooltip: 'Delete',
+                    onPressed: onDelete,
+                    icon: const FUI(BoldRounded.cross, width: 17, height: 17),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.02, end: 0);
   }
 }
 
@@ -1256,6 +1514,239 @@ Future<_LiveEditResult?> _showLiveEditor(
   return result;
 }
 
+Future<void> _publishAppUpdate(
+  BuildContext context,
+  AdminRepository repository,
+) async {
+  final result = await _showAppUpdatePublisher(context);
+  if (result == null) return;
+  if (!context.mounted) return;
+  await _runAdminAction(
+    context,
+    success: 'Release update published. Users will be notified.',
+    action: () => repository.publishAppUpdate(
+      versionName: result.versionName,
+      versionCode: result.versionCode,
+      title: result.title,
+      summary: result.summary,
+      changes: result.changes,
+      updateUrl: result.updateUrl,
+      isRequired: result.isRequired,
+      isActive: result.isActive,
+    ),
+  );
+}
+
+Future<_UpdatePublishResult?> _showAppUpdatePublisher(
+  BuildContext context,
+) async {
+  final versionController = TextEditingController(text: '8.0.2');
+  final codeController = TextEditingController(text: '10');
+  final titleController = TextEditingController(text: 'New VU Hub version');
+  final summaryController = TextEditingController(
+    text: 'A new VU Hub update is available with improvements for students.',
+  );
+  final changesController = TextEditingController(
+    text: 'Improved app experience\nBug fixes and performance upgrades',
+  );
+  final urlController = TextEditingController();
+  var isRequired = false;
+  var isActive = true;
+
+  final result = await showModalBottomSheet<_UpdatePublishResult>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          final scheme = Theme.of(context).colorScheme;
+          return SafeArea(
+            top: false,
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                MediaQuery.viewInsetsOf(context).bottom + 20,
+              ),
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: scheme.primary.withValues(alpha: 0.13),
+                      child: FUI(
+                        BoldRounded.cloudUpload,
+                        color: scheme.primary,
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Publish app update',
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: versionController,
+                        decoration: const InputDecoration(
+                          prefixIcon: FUI(BoldRounded.bookmark),
+                          labelText: 'Version name',
+                          hintText: '8.0.2',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 132,
+                      child: TextField(
+                        controller: codeController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Build code',
+                          hintText: '10',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.megaphone),
+                    labelText: 'Popup title',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: summaryController,
+                  minLines: 3,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.comments),
+                    labelText: 'Short message',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: changesController,
+                  minLines: 4,
+                  maxLines: 8,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.check),
+                    labelText: 'What changed',
+                    helperText: 'Put each change on a new line.',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: urlController,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    prefixIcon: FUI(BoldRounded.link),
+                    labelText: 'Update link',
+                    hintText: 'https://...',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: isRequired,
+                  onChanged: (value) =>
+                      setSheetState(() => isRequired = value),
+                  title: const Text('Required update'),
+                  subtitle: const Text(
+                    'Users cannot dismiss the popup until they open the update link.',
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: isActive,
+                  onChanged: (value) => setSheetState(() => isActive = value),
+                  title: const Text('Active now'),
+                  subtitle: const Text(
+                    'Only active updates are shown inside the app.',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: () {
+                    final versionName = versionController.text.trim();
+                    final versionCode = int.tryParse(
+                      codeController.text.trim(),
+                    );
+                    final title = titleController.text.trim();
+                    final summary = summaryController.text.trim();
+                    final url = urlController.text.trim();
+                    if (versionName.isEmpty ||
+                        versionCode == null ||
+                        versionCode <= 0 ||
+                        title.isEmpty ||
+                        summary.isEmpty ||
+                        url.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Fill version, build code, title, message, and update link.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      _UpdatePublishResult(
+                        versionName: versionName,
+                        versionCode: versionCode,
+                        title: title,
+                        summary: summary,
+                        changes: changesController.text
+                            .split('\n')
+                            .map((line) => line.trim())
+                            .where((line) => line.isNotEmpty)
+                            .toList(),
+                        updateUrl: url,
+                        isRequired: isRequired,
+                        isActive: isActive,
+                      ),
+                    );
+                  },
+                  icon: const FUI(BoldRounded.cloudUpload, width: 18, height: 18),
+                  label: const Text('Publish update'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+
+  versionController.dispose();
+  codeController.dispose();
+  titleController.dispose();
+  summaryController.dispose();
+  changesController.dispose();
+  urlController.dispose();
+  return result;
+}
+
 Future<void> _deleteItem(
   BuildContext context, {
   required String title,
@@ -1335,6 +1826,28 @@ class _LiveEditResult {
   final String title;
   final String body;
   final String status;
+}
+
+class _UpdatePublishResult {
+  const _UpdatePublishResult({
+    required this.versionName,
+    required this.versionCode,
+    required this.title,
+    required this.summary,
+    required this.changes,
+    required this.updateUrl,
+    required this.isRequired,
+    required this.isActive,
+  });
+
+  final String versionName;
+  final int versionCode;
+  final String title;
+  final String summary;
+  final List<String> changes;
+  final String updateUrl;
+  final bool isRequired;
+  final bool isActive;
 }
 
 String _liveStatusKey(LivePostStatus status) {

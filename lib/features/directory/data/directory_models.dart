@@ -2,7 +2,6 @@ import '../../../core/utils/firestore_parsing.dart';
 
 class DirectoryEntry {
   const DirectoryEntry({
-    required this.id,
     required this.name,
     required this.department,
     required this.role,
@@ -19,7 +18,6 @@ class DirectoryEntry {
     this.services = const [],
   });
 
-  final String id;
   final String name;
   final String department;
   final String role;
@@ -35,9 +33,8 @@ class DirectoryEntry {
   final String building;
   final List<String> services;
 
-  factory DirectoryEntry.fromMap(String id, Map<String, dynamic> data) {
+  factory DirectoryEntry.fromMap(Map<String, dynamic> data) {
     return DirectoryEntry(
-      id: id,
       name: firstString(data, [
         'name',
         'title',

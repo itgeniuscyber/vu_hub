@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../features/auth/data/app_session.dart';
+import '../features/updates/presentation/app_update_gate.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -41,6 +42,9 @@ class _VuHubAppState extends State<VuHubApp> {
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
         routerConfig: _router,
+        builder: (context, child) => AppUpdateGate(
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

@@ -73,7 +73,19 @@ class AppSession extends ChangeNotifier {
     );
   }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    final previousUser = _firebaseUser;
+    _firebaseUser = null;
+    _profile = null;
+    _isInitializing = false;
+    _isProfileLoading = false;
+    await _profileSubscription?.cancel();
+    _profileSubscription = null;
+    notifyListeners();
+
+    unawaited(NotificationService.instance.detachUser(previousUser));
+    await _auth.signOut();
+  }
 
   @override
   void dispose() {

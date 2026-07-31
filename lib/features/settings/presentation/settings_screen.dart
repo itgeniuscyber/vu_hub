@@ -124,8 +124,18 @@ class SettingsScreen extends StatelessWidget {
 }
 
 void _signOut(BuildContext context, AppSession session) {
-  Navigator.of(context).popUntil((route) => route.isFirst);
-  unawaited(session.signOut());
+  unawaited(_performSignOut(context, session));
+}
+
+Future<void> _performSignOut(BuildContext context, AppSession session) async {
+  try {
+    await session.signOut();
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Could not sign out: $error')));
+  }
 }
 
 class _SettingsTile extends StatelessWidget {

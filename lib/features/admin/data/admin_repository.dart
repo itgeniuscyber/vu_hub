@@ -5,6 +5,7 @@ import '../../auth/data/user_profile.dart';
 import '../../feed/data/announcement.dart';
 import '../../guild/data/guild_repository.dart';
 import '../../live/data/live_post.dart';
+import '../../updates/data/app_update.dart';
 
 class AdminRepository {
   AdminRepository({FirebaseFirestore? firestore})
@@ -27,6 +28,10 @@ class AdminRepository {
               .limit(80)
               .get();
           final users = await _firestore.collection('users').limit(120).get();
+          final updates = await _firestore
+              .collection('app_updates')
+              .limit(80)
+              .get();
           final liveItems = live.docs.map(LivePost.fromDoc).toList();
           return AdminOverview(
             feedPosts: announcements.docs.length,
@@ -36,6 +41,7 @@ class AdminRepository {
                 .where((item) => item.status == LivePostStatus.live)
                 .length,
             users: users.docs.length,
+            appUpdates: updates.docs.length,
           );
         });
   }
@@ -87,6 +93,20 @@ class AdminRepository {
         (a, b) =>
             a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
       );
+      return items;
+    });
+  }
+
+  Stream<List<AppUpdate>> watchAppUpdates() {
+    return _firestore.collection('app_updates').limit(80).snapshots().map((
+      snapshot,
+    ) {
+      final items = snapshot.docs.map(AppUpdate.fromDoc).toList()
+        ..sort((a, b) {
+          final versionCompare = b.versionCode.compareTo(a.versionCode);
+          if (versionCompare != 0) return versionCompare;
+          return _sortDate(b.createdAt).compareTo(_sortDate(a.createdAt));
+        });
       return items;
     });
   }
@@ -171,6 +191,48 @@ class AdminRepository {
     });
   }
 
+  Future<void> publishAppUpdate({
+    required String versionName,
+    required int versionCode,
+    required String title,
+    required String summary,
+    required List<String> changes,
+    required String updateUrl,
+    required bool isRequired,
+    required bool isActive,
+  }) async {
+    await _firestore.collection('app_updates').add({
+      'versionName': versionName.trim(),
+      'versionCode': versionCode,
+      'title': title.trim(),
+      'summary': summary.trim(),
+      'body': summary.trim(),
+      'changes': changes
+          .map((change) => change.trim())
+          .where((change) => change.isNotEmpty)
+          .toList(),
+      'updateUrl': updateUrl.trim(),
+      'isRequired': isRequired,
+      'forceUpdate': isRequired,
+      'isActive': isActive,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> setAppUpdateActive({
+    required String id,
+    required bool isActive,
+  }) async {
+    await _firestore.collection('app_updates').doc(id).update({
+      'isActive': isActive,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteAppUpdate(String id) {
+    return _firestore.collection('app_updates').doc(id).delete();
+  }
+
   DateTime _sortDate(DateTime? date) => date ?? DateTime(1970);
 }
 
@@ -181,6 +243,7 @@ class AdminOverview {
     required this.liveItems,
     required this.liveNow,
     required this.users,
+    required this.appUpdates,
   });
 
   final int feedPosts;
@@ -188,6 +251,7 @@ class AdminOverview {
   final int liveItems;
   final int liveNow;
   final int users;
+  final int appUpdates;
 }
 
 class AdminUserAccount {

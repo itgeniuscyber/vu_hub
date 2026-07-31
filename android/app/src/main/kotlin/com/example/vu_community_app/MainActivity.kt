@@ -1,4 +1,4 @@
-package com.example.vu_hub
+package com.example.vu_community_app
 
 import io.flutter.embedding.android.FlutterActivity
 
